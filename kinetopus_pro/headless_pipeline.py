@@ -1,8 +1,9 @@
 """
-Orquestador Headless del Motor Quant KineTopus (Fase 13).
+Orquestador Headless del Motor Quant KineTopus (Hito 1 + Hito 2 Multi-Lente).
 
 Ejecuta el pipeline físico-matemático completo de 5 capas + Auto-Calibración +
-Doble Sello de Fiabilidad (Ljung-Box y Mini Walk-Forward) + Geometría Cinemática,
+Doble Sello de Fiabilidad Estricto (Ljung-Box y Mini Walk-Forward con ventana completa) +
+Geometría Cinemática y Variedad Nominal centrada por mínimos cuadrados,
 aislado al 100% de Streamlit (`app.py`) y respetando la Regla de 16GB RAM
 (matrices C-contiguous `np.float64`, cero Pandas en hot loops).
 """
@@ -38,7 +39,7 @@ class KinetopusAnalysisConfig:
     """Configuración tipada para una corrida determinista/estocástica del motor."""
 
     ticker: str = "BTC-USD"
-    period: str = "5y"
+    period: str = "10y"
     interval: str = "1d"
     context_window: int = 1000
     horizon_steps: int = 150
@@ -51,6 +52,9 @@ class KinetopusAnalysisConfig:
     auto_tune: bool = True
     auto_rescue: bool = True
     wf_cuts: int = 10
+    strict_wf_window: bool = True
+    min_wf_effective_cuts: int = 5
+    in_process_fft: bool = True
     random_seed: int = 42
 
 
@@ -67,8 +71,8 @@ class KinetopusHeadlessPipeline:
     Motor de ejecución sin interfaz gráfica (Headless) para agentes de IA y CLI.
     Garantiza paridad matemática con el pipeline de producción, añadiendo:
       1. Auto-calibración sobre la ventana activa y rescate automático Autopilot 2D.
-      2. Doble sello de fiabilidad física (Ljung-Box + Mini Walk-Forward OOS).
-      3. Telemetría geométrica, cinemática, de espacio de fase y calendario CUSUM.
+      2. Doble sello de fiabilidad física estricto (Ljung-Box + Mini Walk-Forward OOS de ventana completa).
+      3. Telemetría geométrica, brecha precio-variedad, espacio de fase y calendario CUSUM.
     """
 
     def __init__(self, config: Optional[KinetopusAnalysisConfig] = None):
@@ -123,6 +127,41 @@ class KinetopusHeadlessPipeline:
         return sigma_dyn
 
     @staticmethod
+    def compute_nominal_smooth(
+        raw_price: np.ndarray,
+        r_smooth: np.ndarray,
+        triggers: List[int],
+        disable_returns: bool = False,
+    ) -> np.ndarray:
+        """
+        Reconstruye la variedad continua de precio nominal P_tilde(t) por régimen CUSUM.
+        Integra exactamente r_smooth(t) (preservando al 100% la derivada dr/dt) y fija la
+        constante de integración C* por mínimos cuadrados en log-precio sobre cada régimen,
+        evitando sesgos verticales cuando el primer o último día del régimen es un pico/valle.
+        """
+        if disable_returns:
+            return np.ascontiguousarray(r_smooth.copy(), dtype=np.float64)
+
+        n = len(raw_price)
+        nominal_smooth = np.empty(n, dtype=np.float64)
+        seg_bounds = [0] + [int(idx) for idx in triggers if 0 < int(idx) < n] + [n]
+        log_p = np.log(np.maximum(raw_price, 1e-8))
+
+        for i in range(len(seg_bounds) - 1):
+            s_i, e_i = seg_bounds[i], seg_bounds[i + 1]
+            if e_i <= s_i:
+                continue
+            if e_i - s_i == 1:
+                nominal_smooth[s_i] = raw_price[s_i]
+                continue
+            cum_r = np.zeros(e_i - s_i, dtype=np.float64)
+            cum_r[1:] = np.cumsum(r_smooth[s_i + 1 : e_i])
+            c_star = float(np.mean(log_p[s_i:e_i] - cum_r))
+            nominal_smooth[s_i:e_i] = np.exp(cum_r + c_star)
+
+        return np.ascontiguousarray(nominal_smooth, dtype=np.float64)
+
+    @staticmethod
     def _build_effective_boundaries(
         shift_idx: List[int], total_len: int, min_len: int = 15
     ) -> Tuple[List[int], bool, Optional[int]]:
@@ -148,6 +187,103 @@ class KinetopusHeadlessPipeline:
 
         filtered.append(total_len)
         return filtered, unconsolidated_break, unconsolidated_idx
+
+    def _run_fast_cusum_autotune(
+        self,
+        df_active: pd.DataFrame,
+        min_drift: float = 0.1,
+        max_drift: float = 5.0,
+        steps: float = 0.1,
+    ) -> Tuple[float, Dict[str, Any]]:
+        """
+        Paridad matemática exacta con `CUSUMAutoTuner.run_search` (k en [0.1..5.0] paso 0.1,
+        tolerancia base 0.0050, H=5.0, poly_degree=1), ejecutando FFT en proceso y cacheando
+        segmentos (start, end) idénticos para evitar crear subprocesos anidados en Windows.
+        """
+        cfg = self.cfg
+        if not cfg.in_process_fft:
+            tuner = CUSUMAutoTuner(
+                df_active.copy(),
+                disable_norm=cfg.disable_norm,
+                disable_returns=cfg.disable_returns,
+            )
+            return tuner.run_search(min_drift=min_drift, max_drift=max_drift, steps=steps)
+
+        log_returns, volumen_z, precio_raw, dt_val = MarketLoader.prepare_quant_input(
+            df_active.copy(), disable_norm=cfg.disable_norm, disable_returns=cfg.disable_returns
+        )
+        t = np.arange(len(log_returns), dtype=np.float64) * dt_val
+        total_velas = len(t)
+
+        fft_r = SpectralAnalyzer._compute_fft(log_returns, dt_val, 2)
+        fft_v = SpectralAnalyzer._compute_fft(volumen_z, dt_val, 2)
+
+        blender = ContinuousBlender(tolerance=0.0050)
+        blender.fit(t, log_returns, fft_r["periods"], feature_idx=0)
+        blender.fit(t, volumen_z, fft_v["periods"], feature_idx=1)
+
+        r_smooth, r_dot, _ = blender.compute_continuous(0, t)
+        v_smooth, v_dot, _ = blender.compute_continuous(1, t)
+
+        x_matrix = np.ascontiguousarray(np.column_stack((r_smooth, v_smooth)), dtype=np.float64)
+        x_dot_matrix = np.ascontiguousarray(np.column_stack((r_dot, v_dot)), dtype=np.float64)
+        discoverer = PhysicsDiscoverer(poly_degree=1)
+
+        seg_r2_cache: Dict[Tuple[int, int], float] = {}
+        shift_eval_cache: Dict[Tuple[int, ...], Tuple[float, float, int]] = {}
+
+        best_drift = min_drift
+        best_score = -float("inf")
+        best_report: Dict[str, Any] = {}
+
+        drift_values = np.arange(min_drift, max_drift + steps, steps)
+        for k in drift_values:
+            detector = RegimeShiftDetector(threshold=5.0, drift=float(k))
+            cusum_report = detector.detect(log_returns, r_smooth)
+            shift_idx = cusum_report["shift_indices"]
+            sh_key = tuple(shift_idx)
+
+            if sh_key not in shift_eval_cache:
+                boundaries = [0] + shift_idx + [total_velas]
+                weighted_r2_sum = 0.0
+                for i in range(len(boundaries) - 1):
+                    start = boundaries[i]
+                    end = boundaries[i + 1]
+                    length = end - start
+                    if length < 15:
+                        continue
+                    if (start, end) not in seg_r2_cache:
+                        p_rep = discoverer.extract_equations(
+                            t=t[start:end],
+                            x=x_matrix[start:end],
+                            x_dot=x_dot_matrix[start:end],
+                            dt=dt_val,
+                            horizon_steps=1,
+                            sigma_res_r=0.0,
+                            sigma_res_v=0.0,
+                            last_price=float(precio_raw[end - 1]),
+                            disable_norm=cfg.disable_norm,
+                            disable_returns=cfg.disable_returns,
+                        )
+                        seg_r2_cache[(start, end)] = max(0.0, float(p_rep["score"]))
+                    peso = length / float(total_velas)
+                    weighted_r2_sum += seg_r2_cache[(start, end)] * peso
+
+                num_quiebres = len(shift_idx)
+                fitness = weighted_r2_sum / (1.0 + 0.1 * num_quiebres)
+                shift_eval_cache[sh_key] = (fitness, weighted_r2_sum, num_quiebres)
+
+            fitness, weighted_r2_sum, num_quiebres = shift_eval_cache[sh_key]
+            if fitness > best_score:
+                best_score = fitness
+                best_drift = float(k)
+                best_report = {
+                    "fitness": fitness,
+                    "weighted_r2": weighted_r2_sum,
+                    "num_quiebres": num_quiebres,
+                }
+
+        return round(best_drift, 2), best_report
 
     def _run_core_pass(
         self,
@@ -289,10 +425,8 @@ class KinetopusHeadlessPipeline:
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Resuelve analíticamente el sistema acoplado sin bloquear el proceso principal:
-          - Para `poly_degree == 1`: descompone espectralmente la matriz 2x2 A en <1 ms,
-            obteniendo autovalores (estabilidad de Lyapunov), punto de equilibrio y fórmula cerrada LaTeX.
-          - Para `poly_degree >= 2`: ejecuta `SymbolicTranslator` en un hilo `daemon=True` con corte
-            duro de 2.0 s (evitando el bloqueo de `ThreadPoolExecutor.__exit__` en SymPy).
+          - Para `poly_degree == 1`: descompone espectralmente la matriz 2x2 A en <1 ms.
+          - Para `poly_degree >= 2`: ejecuta `SymbolicTranslator` en hilo `daemon=True` con corte de 2.0 s.
         """
         var_name = "P" if self.cfg.disable_returns else "r"
         coefs = np.asarray(active_discoverer.model.coefficients(), dtype=np.float64)
@@ -376,7 +510,6 @@ class KinetopusHeadlessPipeline:
             }
             return latex_sol, spec_diag
 
-        # Polinomios grado >= 2: hilo daemon no bloqueante
         holder: Dict[str, str] = {}
 
         def _worker() -> None:
@@ -414,7 +547,6 @@ class KinetopusHeadlessPipeline:
 
         res_spline = log_returns[start_i:end_i] - r_smooth[start_i:end_i]
 
-        # Reconstruir innovación de SINDy en la escala exacta del ajuste
         x_slice = np.column_stack((r_smooth[start_i:end_i], v_smooth[start_i:end_i])).astype(np.float64)
         xdot_slice = np.column_stack((r_dot[start_i:end_i], v_dot[start_i:end_i])).astype(np.float64)
 
@@ -463,7 +595,6 @@ class KinetopusHeadlessPipeline:
         lb_sindy = _eval_lb(res_sindy)
 
         spline_wn = lb_spline.get("is_white_noise_alpha_05")
-        sindy_wn = lb_sindy.get("is_white_noise_alpha_05")
 
         if spline_wn is True:
             verdict = "RUIDO_BLANCO_CERTIFICADO (El suavizado topológico aisló la señal sin dejar autocorrelación lineal fuerte en el residuo)."
@@ -487,25 +618,85 @@ class KinetopusHeadlessPipeline:
         effective_k: float,
     ) -> Dict[str, Any]:
         """
-        Ejecuta un Mini Walk-Forward sin fuga de datos (Out-of-Sample estricto) en ~10 cortes
-        históricos del mismo activo usando el Drift k calibrado y FFT en proceso (sin overhead
-        de multiprocesamiento), clasificando la coherencia física del activo.
+        Ejecuta el Mini Walk-Forward sin fuga de datos (Out-of-Sample estricto):
+          - En modo estricto (`strict_wf_window=True` y `context_window > 0`), SOLO admite cortes `c`
+            con ventana de entrenamiento completa (`len(p_train) == context_window`), sin truncar.
+          - Reporta `effective_cuts` y, si es menor que `min_wf_effective_cuts` (por defecto 5),
+            el sello queda como `INSUFICIENTE` (`seal_approved = False`).
         """
         cfg = self.cfg
         n_total = len(price_full)
-        eval_h = min(cfg.horizon_steps, max(20, min(90, n_total // 6)))
-        min_train = max(120, min(250, n_total // 3))
-        max_cut = n_total - eval_h
+        req_window = int(cfg.context_window) if cfg.context_window > 0 else 0
+        min_req_cuts = int(cfg.min_wf_effective_cuts)
 
-        if cfg.wf_cuts <= 0 or max_cut <= min_train + 20:
+        if cfg.wf_cuts <= 0:
             return {
                 "executed": False,
-                "reason": "Historial insuficiente para validación Walk-Forward Out-of-Sample.",
+                "strict_full_window_enforced": bool(cfg.strict_wf_window and req_window > 0),
+                "required_window_candles": req_window,
+                "min_required_effective_cuts": min_req_cuts,
+                "effective_cuts": 0,
+                "seal_approved": False,
+                "reason": "Walk-Forward desactivado por configuración (wf_cuts <= 0).",
                 "asset_physics_class": "NO_EVALUADO",
             }
 
-        cut_indices = np.linspace(min_train, max_cut, num=cfg.wf_cuts, dtype=int)
-        cut_indices = sorted(list(set(int(c) for c in cut_indices)))
+        eval_h = min(cfg.horizon_steps, max(20, min(90, n_total // 6)))
+        max_cut = n_total - eval_h
+
+        if cfg.strict_wf_window and req_window > 0:
+            # Acotar el inicio a eras de mercado modernas (~15 años / 2x ventana) manteniendo ventana completa W
+            modern_span = max(3650, 2 * req_window)
+            min_cut = max(req_window, n_total - modern_span - eval_h)
+            min_stride = max(5, eval_h // 12)
+
+            if max_cut < req_window:
+                return {
+                    "executed": True,
+                    "strict_full_window_enforced": True,
+                    "required_window_candles": req_window,
+                    "eval_horizon_candles": int(eval_h),
+                    "min_required_effective_cuts": min_req_cuts,
+                    "total_cuts": 0,
+                    "valid_cuts": 0,
+                    "effective_cuts": 0,
+                    "validity_rate_pct": 0.0,
+                    "seal_approved": False,
+                    "asset_physics_class": "INSUFICIENTE",
+                    "reason": (
+                        f"Historial total ({n_total}v) insuficiente para formar al menos 1 corte OOS "
+                        f"de ventana completa ({req_window}v + horizonte {eval_h}v)."
+                    ),
+                    "interpretation": (
+                        f"Sello INSUFICIENTE (0/{min_req_cuts} cortes efectivos de ventana completa {req_window}v): "
+                        "no aprueba validación OOS."
+                    ),
+                }
+
+            max_possible_cuts = ((max_cut - min_cut) // min_stride) + 1
+            n_place = min(int(cfg.wf_cuts), int(max_possible_cuts))
+            if n_place <= 1:
+                cut_indices = [int(max_cut)]
+            else:
+                cut_indices = sorted(
+                    list(set(int(c) for c in np.linspace(min_cut, max_cut, num=n_place, dtype=int)))
+                )
+        else:
+            min_train = max(120, min(250, n_total // 3))
+            if max_cut <= min_train + 20:
+                return {
+                    "executed": False,
+                    "strict_full_window_enforced": False,
+                    "required_window_candles": req_window,
+                    "min_required_effective_cuts": min_req_cuts,
+                    "effective_cuts": 0,
+                    "seal_approved": False,
+                    "reason": "Historial insuficiente para validación Walk-Forward Out-of-Sample.",
+                    "asset_physics_class": "NO_EVALUADO",
+                }
+            cut_indices = sorted(
+                list(set(int(c) for c in np.linspace(min_train, max_cut, num=cfg.wf_cuts, dtype=int)))
+            )
 
         short_step = min(10, eval_h)
         mid_step = min(30, eval_h)
@@ -517,16 +708,23 @@ class KinetopusHeadlessPipeline:
         mapes_full: List[float] = []
         naive_mapes_full: List[float] = []
         r2_list: List[float] = []
+        train_lengths_used: List[int] = []
         valid_count = 0
 
         eps = 1e-8
 
         for cut in cut_indices:
-            win_start = max(0, cut - cfg.context_window) if cfg.context_window > 0 else 0
+            win_start = (cut - req_window) if req_window > 0 else 0
+            if cfg.strict_wf_window and req_window > 0 and win_start < 0:
+                continue
+            win_start = max(0, win_start)
+
             p_train = np.ascontiguousarray(price_full[win_start:cut], dtype=np.float64)
             v_train_raw = np.ascontiguousarray(vol_raw_full[win_start:cut], dtype=np.float64)
             p_future = np.ascontiguousarray(price_full[cut : cut + eval_h], dtype=np.float64)
 
+            if cfg.strict_wf_window and req_window > 0 and len(p_train) != req_window:
+                continue
             if len(p_train) < 60 or len(p_future) < eval_h:
                 continue
 
@@ -548,11 +746,9 @@ class KinetopusHeadlessPipeline:
             t_sub = np.arange(len(r_train), dtype=np.float64) * dt_val
 
             try:
-                # FFT directa en proceso (evita crear pools en bucle corto)
                 fft_r = SpectralAnalyzer._compute_fft(r_train, dt_val, 2)
                 fft_v = SpectralAnalyzer._compute_fft(v_train, dt_val, 2)
 
-                # En Walk-Forward causal (paridad con evaluator.py), el auto-tuner usa tol=0.0050
                 wf_tol = float(effective_tol)
                 b_sub = ContinuousBlender(tolerance=wf_tol)
                 b_sub.fit(t_sub, r_train, fft_r["periods"], 0)
@@ -563,7 +759,7 @@ class KinetopusHeadlessPipeline:
                 xm_all = np.ascontiguousarray(np.column_stack((rs, vs)), dtype=np.float64)
                 xdm_all = np.ascontiguousarray(np.column_stack((rd, vd)), dtype=np.float64)
 
-                # Calibración causal In-Sample de k por corte (sin data leakage del presente)
+                # Calibración causal In-Sample de k por corte
                 if cfg.cusum_k is not None:
                     best_cut_k = float(cfg.cusum_k)
                 else:
@@ -647,6 +843,7 @@ class KinetopusHeadlessPipeline:
                 continue
 
             valid_count += 1
+            train_lengths_used.append(int(len(p_train)))
             r2_list.append(float(p_rep.get("score", 0.0)))
 
             def _dir_hit(pred_end: float, act_end: float) -> float:
@@ -667,40 +864,75 @@ class KinetopusHeadlessPipeline:
 
         total_cuts = len(cut_indices)
         if valid_count == 0:
+            insufficient_flag = cfg.strict_wf_window and total_cuts < min_req_cuts
+            cls_zero = "INSUFICIENTE" if insufficient_flag else "INESTABLE_O_RUIDO_EXTREMO"
             return {
                 "executed": True,
-                "total_cuts": total_cuts,
+                "strict_full_window_enforced": bool(cfg.strict_wf_window and req_window > 0),
+                "required_window_candles": req_window,
+                "eval_horizon_candles": int(eval_h),
+                "min_required_effective_cuts": min_req_cuts,
+                "total_cuts": int(total_cuts),
                 "valid_cuts": 0,
+                "effective_cuts": 0,
                 "validity_rate_pct": 0.0,
-                "asset_physics_class": "INESTABLE_O_RUIDO_EXTREMO",
-                "warning": "Ningún corte histórico produjo una EDO predictiva válida.",
+                "seal_approved": False,
+                "asset_physics_class": cls_zero,
+                "warning": "Ningún corte histórico de ventana completa produjo una EDO predictiva válida.",
+                "interpretation": (
+                    f"Sello {cls_zero} (0/{min_req_cuts} cortes efectivos): no aprueba validación OOS."
+                ),
             }
 
         hr_short = float(np.mean(hits_short) * 100.0)
         hr_mid = float(np.mean(hits_mid) * 100.0)
         hr_full = float(np.mean(hits_full) * 100.0)
-        # Promedio equilibrado entre horizonte medio y completo para clasificar robustez
         hr_consensus = 0.5 * hr_mid + 0.5 * hr_full
-
-        if hr_consensus >= 55.0:
-            phys_class = "COHERENTE_INERCIAL"
-            class_note = "El activo exhibe memoria inercial explotable (>55% HR OOS, comportamiento tipo QQQ/MSFT/BTC)."
-        elif hr_consensus >= 50.0:
-            phys_class = "TRANSICIONAL_BORDE"
-            class_note = "Coherencia física parcial (50%-55% HR OOS); exigir confirmación de baja tensión CUSUM y catalizadores."
-        else:
-            phys_class = "EXOGENO_FUNDAMENTALISTA"
-            class_note = "Alerta Caso GLD (<50% HR OOS): dinámica dominada por choques exógenos/macro fuera del plano (r, V)."
-
         med_mape = float(np.median(mapes_full))
         med_naive = float(np.median(naive_mapes_full))
 
+        if valid_count < min_req_cuts:
+            phys_class = "INSUFICIENTE"
+            seal_approved = False
+            class_note = (
+                f"Sello INSUFICIENTE ({valid_count}/{min_req_cuts} cortes efectivos con ventana completa "
+                f"de {req_window}v): muestra OOS insuficiente para aprobar el sello."
+            )
+        elif hr_consensus >= 55.0:
+            phys_class = "COHERENTE_INERCIAL"
+            seal_approved = True
+            class_note = (
+                f"El activo exhibe memoria inercial explotable ({hr_consensus:.1f}% HR OOS en "
+                f"{valid_count} cortes de ventana completa)."
+            )
+        elif hr_consensus >= 50.0:
+            phys_class = "TRANSICIONAL_BORDE"
+            seal_approved = True
+            class_note = (
+                f"Coherencia física parcial ({hr_consensus:.1f}% HR OOS en {valid_count} cortes); "
+                "exigir confirmación de baja tensión CUSUM y catalizadores."
+            )
+        else:
+            phys_class = "EXOGENO_FUNDAMENTALISTA"
+            seal_approved = False
+            class_note = (
+                f"Alerta Caso GLD ({hr_consensus:.1f}% HR OOS < 50% en {valid_count} cortes): "
+                "dinámica dominada por choques exógenos/macro fuera del plano (r, V)."
+            )
+
         return {
             "executed": True,
+            "strict_full_window_enforced": bool(cfg.strict_wf_window and req_window > 0),
+            "required_window_candles": req_window,
+            "min_train_candles_used": int(min(train_lengths_used)) if train_lengths_used else 0,
+            "max_train_candles_used": int(max(train_lengths_used)) if train_lengths_used else 0,
             "eval_horizon_candles": int(eval_h),
+            "min_required_effective_cuts": min_req_cuts,
             "total_cuts": int(total_cuts),
             "valid_cuts": int(valid_count),
-            "validity_rate_pct": round((valid_count / total_cuts) * 100.0, 2),
+            "effective_cuts": int(valid_count),
+            "validity_rate_pct": round((valid_count / max(total_cuts, 1)) * 100.0, 2),
+            "seal_approved": bool(seal_approved),
             f"hit_ratio_t{short_step}_pct": round(hr_short, 2),
             f"hit_ratio_t{mid_step}_pct": round(hr_mid, 2),
             f"hit_ratio_t{eval_h}_pct": round(hr_full, 2),
@@ -714,10 +946,113 @@ class KinetopusHeadlessPipeline:
             "interpretation": class_note,
         }
 
+    @staticmethod
+    def evaluate_double_seal(
+        lb_seal: Dict[str, Any],
+        wf_seal: Dict[str, Any],
+        active_r2: float,
+        tension_ratio: float,
+        is_unstable: bool,
+        empty_eq: bool,
+    ) -> Dict[str, Any]:
+        """Consolida Ljung-Box + Mini Walk-Forward Estricto en un veredicto unificado de Doble Sello."""
+        reasons: List[str] = []
+        spline_wn = lb_seal.get("spline_residuals", {}).get("is_white_noise_alpha_05")
+        wf_cls = wf_seal.get("asset_physics_class", "NO_EVALUADO")
+        eff_cuts = int(wf_seal.get("effective_cuts", wf_seal.get("valid_cuts", 0)))
+        min_cuts = int(wf_seal.get("min_required_effective_cuts", 5))
+        hr_pct = wf_seal.get("consensus_hit_ratio_pct")
+
+        if is_unstable or empty_eq:
+            reasons.append("Fallo de estabilidad SINDy o ecuación de retorno anulada.")
+            return {
+                "seal_passed": False,
+                "seal_grade": "FALLO_ESTABILIDAD",
+                "wf_passed": False,
+                "ljung_box_spline_white_noise": spline_wn,
+                "effective_oos_cuts": eff_cuts,
+                "min_required_oos_cuts": min_cuts,
+                "reasons": reasons,
+            }
+
+        if wf_cls == "NO_EVALUADO":
+            reasons.append("Walk-Forward OOS no ejecutado.")
+            return {
+                "seal_passed": False,
+                "seal_grade": "NO_EVALUADO",
+                "wf_passed": False,
+                "ljung_box_spline_white_noise": spline_wn,
+                "effective_oos_cuts": eff_cuts,
+                "min_required_oos_cuts": min_cuts,
+                "reasons": reasons,
+            }
+
+        if wf_cls == "INSUFICIENTE" or eff_cuts < min_cuts:
+            reasons.append(f"Cortes OOS efectivos insuficientes ({eff_cuts}/{min_cuts}).")
+            return {
+                "seal_passed": False,
+                "seal_grade": "INSUFICIENTE",
+                "wf_passed": False,
+                "ljung_box_spline_white_noise": spline_wn,
+                "effective_oos_cuts": eff_cuts,
+                "min_required_oos_cuts": min_cuts,
+                "reasons": reasons,
+            }
+
+        if wf_cls in ("EXOGENO_FUNDAMENTALISTA", "INESTABLE_O_RUIDO_EXTREMO"):
+            reasons.append(f"Walk-Forward OOS reprobado ({wf_cls}, HR={hr_pct}%).")
+            return {
+                "seal_passed": False,
+                "seal_grade": "REPROBADO_EXOGENO",
+                "wf_passed": False,
+                "ljung_box_spline_white_noise": spline_wn,
+                "effective_oos_cuts": eff_cuts,
+                "min_required_oos_cuts": min_cuts,
+                "reasons": reasons,
+            }
+
+        if active_r2 < 0.35:
+            reasons.append(f"Pureza interna SINDy demasiado débil (R²={active_r2:.3f} < 0.35).")
+            return {
+                "seal_passed": False,
+                "seal_grade": "REPROBADO_BAJO_R2",
+                "wf_passed": True,
+                "ljung_box_spline_white_noise": spline_wn,
+                "effective_oos_cuts": eff_cuts,
+                "min_required_oos_cuts": min_cuts,
+                "reasons": reasons,
+            }
+
+        # Walk-Forward aprobado (COHERENTE_INERCIAL o TRANSICIONAL_BORDE)
+        reasons.append(f"Walk-Forward OOS aprobado ({wf_cls}, HR={hr_pct}%, {eff_cuts} cortes).")
+        conditional = False
+        if wf_cls == "TRANSICIONAL_BORDE":
+            conditional = True
+            reasons.append("Coherencia OOS en franja transicional (50%-55%).")
+        if spline_wn is False:
+            conditional = True
+            reasons.append("Ljung-Box detecta autocorrelación residual en el Spline (p <= 0.05).")
+        elif spline_wn is True:
+            reasons.append("Ljung-Box certifica ruido blanco en residuos del Spline (p > 0.05).")
+        if tension_ratio > 0.85:
+            conditional = True
+            reasons.append(f"Tensión CUSUM elevada ({tension_ratio:.0%} de H).")
+
+        return {
+            "seal_passed": True,
+            "seal_grade": "APROBADO_CONDICIONAL" if conditional else "APROBADO_PLENO",
+            "wf_passed": True,
+            "ljung_box_spline_white_noise": spline_wn,
+            "effective_oos_cuts": eff_cuts,
+            "min_required_oos_cuts": min_cuts,
+            "reasons": reasons,
+        }
+
     def _extract_geometry_and_forensics(
         self,
         dates_active: List[str],
         precio_raw: np.ndarray,
+        nominal_smooth: np.ndarray,
         log_returns: np.ndarray,
         r_smooth: np.ndarray,
         r_dot: np.ndarray,
@@ -733,13 +1068,13 @@ class KinetopusHeadlessPipeline:
         effective_k: float,
     ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], np.ndarray, np.ndarray]:
         """
-        Traduce las curvas continuas, espacio de fase, quiebres CUSUM y cono Monte Carlo
-        a descriptores geométricos exactos para consumo directo por agentes de IA.
+        Traduce las curvas continuas, brecha precio-variedad, espacio de fase, quiebres CUSUM
+        y cono Monte Carlo a descriptores geométricos exactos para consumo directo por agentes de IA.
         """
         cfg = self.cfg
         scale = 1.0 if cfg.disable_returns else 100.0
 
-        # 1. Cinemática (Velocidad dr/dt vs Aceleración d²r/dt²)
+        # 1. Cinemática (Velocidad dr/dt vs Aceleración d²r/dt²) + Brecha Precio-Variedad
         vel_now = float(r_dot[-1] * scale)
         acc_now = float(r_dot2[-1] * scale)
         vol_vel_now = float(v_dot[-1])
@@ -756,6 +1091,17 @@ class KinetopusHeadlessPipeline:
         else:
             quadrant = "Q4_CAIDA_BAJISTA_FRENANDO"
             kin_desc = "Velocidad negativa pero aceleración positiva: desaceleración de la caída (absorción / posible suelo cinemático)."
+
+        last_price = float(precio_raw[-1])
+        spline_price_now = float(nominal_smooth[-1])
+        gap_now_pct = (
+            ((last_price - spline_price_now) / spline_price_now) * 100.0
+            if abs(spline_price_now) > 1e-8
+            else 0.0
+        )
+        tail_n = min(30, len(precio_raw))
+        denom_tail = np.maximum(np.abs(nominal_smooth[-tail_n:]), 1e-8)
+        gap_30c_pct = float(np.mean((precio_raw[-tail_n:] - nominal_smooth[-tail_n:]) / denom_tail) * 100.0)
 
         # Últimos cruces por cero de velocidad (extremos locales) y aceleración (inflexiones)
         vel_signs = np.sign(r_dot)
@@ -789,7 +1135,7 @@ class KinetopusHeadlessPipeline:
                 }
             )
 
-        # 2. Topología del Atractor de Espacio de Fase (Escalas Homogéneas Corregidas)
+        # 2. Topología del Atractor de Espacio de Fase (Escalas Homogéneas + Sentido de Giro)
         act_s = int(active_report.get("start_idx", 0))
         act_e = int(active_report.get("end_idx", len(r_smooth)))
 
@@ -810,6 +1156,20 @@ class KinetopusHeadlessPipeline:
         radius_ratio = r_now_orb / r_med_orb
         radial_slope = float(radii[-1] - np.mean(radii[-min(5, len(radii)) :]))
 
+        # Momento angular medio en el plano (V_norm, r_norm) para identificar giro horario/antihorario
+        if len(v_norm) >= 3:
+            dv_orb = np.diff(v_norm)
+            dr_orb = np.diff(r_norm)
+            ang_cross = float(np.mean(v_norm[:-1] * dr_orb - r_norm[:-1] * dv_orb))
+            if ang_cross > 1e-4:
+                rot_sense = "ANTIHORARIO (Volumen antecede al retorno)"
+            elif ang_cross < -1e-4:
+                rot_sense = "HORARIO (Retorno antecede al volumen)"
+            else:
+                rot_sense = "CUASI_COLINEAL"
+        else:
+            rot_sense = "INDETERMINADO"
+
         if radius_ratio < 0.60:
             attractor_state = "COMPRESION_EQUILIBRIO_CENTRAL"
             attractor_desc = "Órbita contraída cerca del centro de equilibrio: baja energía cinética, mercado en compresión."
@@ -823,10 +1183,8 @@ class KinetopusHeadlessPipeline:
             attractor_state = "CICLO_ORBITAL_ACTIVO"
             attractor_desc = "Órbita estacionaria alrededor del atractor del régimen vigente."
 
-        # Reconstruir trayectoria futura en el MISMO espacio homogéneo (V_smooth, r_pct)
         pred = active_report.get("prediction", {})
         det_prices = np.asarray(pred.get("det_price_path", []), dtype=np.float64)
-        last_price = float(precio_raw[-1])
 
         if len(det_prices) > 0:
             if cfg.disable_returns:
@@ -835,7 +1193,6 @@ class KinetopusHeadlessPipeline:
                 seq_p = np.concatenate(([last_price], det_prices))
                 seq_p = np.maximum(seq_p, 1e-8)
                 det_r_pct_path = np.log(seq_p[1:] / seq_p[:-1]) * 100.0
-            # Relajación hidrodinámica del volumen (consistente con amortiguamiento 0.99)
             steps_arr = np.arange(1, len(det_prices) + 1, dtype=np.float64)
             det_v_path = float(v_smooth[-1]) * (0.99**steps_arr)
         else:
@@ -849,6 +1206,9 @@ class KinetopusHeadlessPipeline:
                 "volume_flow_dV_dt": round(vol_vel_now, 6),
                 "quadrant": quadrant,
                 "interpretation": kin_desc,
+                "spline_nominal_price_now": round(spline_price_now, 4),
+                "price_vs_spline_gap_pct": round(gap_now_pct, 2),
+                "last_30c_mean_gap_pct": round(gap_30c_pct, 2),
                 "recent_velocity_reversals": recent_extrema,
                 "recent_acceleration_inflections": recent_inflections,
             },
@@ -857,12 +1217,13 @@ class KinetopusHeadlessPipeline:
                 "current_state_v_z": round(float(v_smooth[-1]), 5),
                 "orbital_radius_ratio_vs_median": round(radius_ratio, 3),
                 "radial_momentum_5c": round(radial_slope, 4),
+                "rotation_sense": rot_sense,
                 "topology_class": attractor_state,
                 "interpretation": attractor_desc,
             },
         }
 
-        # 3. Forense CUSUM con Fechas Reales + Nivel Exacto de Invalidación
+        # 3. Forense CUSUM con Fechas Reales + Pico Máximo + Nivel Exacto de Invalidación
         s_pos = cusum_report["s_pos"]
         s_neg = cusum_report["s_neg"]
         shift_indices = cusum_report["shift_indices"]
@@ -871,12 +1232,24 @@ class KinetopusHeadlessPipeline:
         sigma_dyn = self._compute_ewma_sigma(np.diff(residuo), len(residuo))
         z_scores = residuo / sigma_dyn
 
+        # Pico máximo acumulado de tensión CUSUM (útil incluso cuando Quiebres = 0)
+        combined_s = np.maximum(s_pos, s_neg)
+        peak_idx = int(np.argmax(combined_s)) if len(combined_s) > 0 else 0
+        peak_val = float(combined_s[peak_idx]) if len(combined_s) > 0 else 0.0
+        peak_side = "S+ (Alcista)" if (len(s_pos) > 0 and s_pos[peak_idx] >= s_neg[peak_idx]) else "S- (Bajista)"
+        max_cusum_peak = {
+            "candle_idx": peak_idx,
+            "date": dates_active[peak_idx] if dates_active else None,
+            "price": round(float(precio_raw[peak_idx]), 4) if len(precio_raw) > 0 else None,
+            "peak_score": round(peak_val, 3),
+            "ratio_vs_h": round(peak_val / cfg.cusum_h, 3) if cfg.cusum_h > 0 else 0.0,
+            "side": peak_side,
+        }
+
         dated_breaks = []
-        raw_trigs = set(cusum_report.get("raw_triggers", []))
         for s_idx in shift_indices:
             si = int(s_idx)
             prev_i = max(0, si - 1)
-            # Como CUSUM resetea a 0 en el instante del disparo, miramos la tensión previa + z actual
             est_pos = float(s_pos[prev_i] + z_scores[si] - effective_k)
             est_neg = float(s_neg[prev_i] - z_scores[si] - effective_k)
             b_type = "QUIEBRE_ALCISTA (S+ > H)" if est_pos >= est_neg else "QUIEBRE_BAJISTA (S- > H)"
@@ -891,7 +1264,6 @@ class KinetopusHeadlessPipeline:
                 }
             )
 
-        # Top-3 anomalías de residuo en el régimen activo (o ventana reciente)
         abs_z_act = np.abs(z_scores[act_s:act_e])
         top_k_anom = min(3, len(abs_z_act))
         top_anomalies = []
@@ -910,7 +1282,6 @@ class KinetopusHeadlessPipeline:
                     }
                 )
 
-        # Nivel de invalidación instantáneo (1 vela) para romper H
         cur_s_pos = float(s_pos[-1])
         cur_s_neg = float(s_neg[-1])
         cur_tension = max(cur_s_pos, cur_s_neg)
@@ -982,6 +1353,7 @@ class KinetopusHeadlessPipeline:
                     else ("TENSION_ALTA" if tension_ratio > 0.6 else "ESTABLE")
                 ),
             },
+            "window_max_tension_peak": max_cusum_peak,
             "invalidation_levels_1candle": {
                 "upside_regime_break_price": round(float(price_break_up), 4),
                 "downside_regime_break_price": round(float(price_break_down), 4),
@@ -994,11 +1366,11 @@ class KinetopusHeadlessPipeline:
             "regimes_summary": regime_catalog,
         }
 
-        # 4. Silueta del Cono Estocástico y Proyección Determinística
+        # 4. Silueta del Cono Estocástico y Proyección Determinística (incluye hitos 1s/1m/3m para cripto y bolsa)
         p_percentiles = pred.get("price_percentiles", [])
         has_mc = len(p_percentiles) == 5 and len(p_percentiles[0]) > 0 and not active_report.get("empty_r_eq", False)
 
-        raw_milestones = [1, 5, 15, 30, 60, 100, cfg.horizon_steps]
+        raw_milestones = [1, 5, 7, 15, 21, 30, 60, 63, 90, 100, cfg.horizon_steps]
         milestones = sorted(list({m for m in raw_milestones if 1 <= m <= cfg.horizon_steps}))
 
         checkpoints = []
@@ -1031,7 +1403,6 @@ class KinetopusHeadlessPipeline:
                 )
             checkpoints.append(entry)
 
-        # Clasificación de la geometría de la trayectoria proyectada
         traj_shape = "NO_DISPONIBLE"
         peak_info: Dict[str, Any] = {}
         if len(det_prices) >= 3:
@@ -1089,7 +1460,6 @@ class KinetopusHeadlessPipeline:
             df.copy(), disable_norm=cfg.disable_norm, disable_returns=cfg.disable_returns
         )
 
-        # Extraer volumen crudo float64 para Walk-Forward sin leakage
         df_cols_norm = {str(c).title(): c for c in df.columns}
         if "Volume" in df_cols_norm:
             vol_raw_full = np.ascontiguousarray(
@@ -1099,8 +1469,6 @@ class KinetopusHeadlessPipeline:
         else:
             vol_raw_full = np.ones(len(price_full), dtype=np.float64)
 
-        # Recortar ventana activa ANTES de normalizar (Z-score local sin contaminación multi-año,
-        # garantizando paridad 100% exacta con CUSUMAutoTuner y WalkForwardEvaluator)
         if cfg.context_window > 0 and len(df) > cfg.context_window:
             df_active = df.iloc[-cfg.context_window :].copy()
             dates_active = dates_full[-cfg.context_window :]
@@ -1128,10 +1496,7 @@ class KinetopusHeadlessPipeline:
             calibration_info["drift_k_source"] = "manual_override"
             calibration_info["effective_cusum_k"] = effective_k
         elif cfg.auto_tune:
-            tuner = CUSUMAutoTuner(
-                df_active, disable_norm=cfg.disable_norm, disable_returns=cfg.disable_returns
-            )
-            best_k, tuner_rep = tuner.run_search()
+            best_k, tuner_rep = self._run_fast_cusum_autotune(df_active)
             effective_k = float(best_k)
             calibration_info["auto_tune_executed"] = True
             calibration_info["drift_k_source"] = "CUSUMAutoTuner"
@@ -1146,9 +1511,16 @@ class KinetopusHeadlessPipeline:
             calibration_info["effective_cusum_k"] = effective_k
 
         # 2. Sensor Espectral FFT (Capa 1)
-        sensor = SpectralAnalyzer(top_k=2)
-        data_matrix = np.ascontiguousarray(np.column_stack((log_returns, volumen_z)), dtype=np.float64)
-        fft_results = sensor.analyze(data_matrix, dt=dt_val)
+        if cfg.in_process_fft:
+            fft_results = {
+                0: SpectralAnalyzer._compute_fft(log_returns, dt_val, 2),
+                1: SpectralAnalyzer._compute_fft(volumen_z, dt_val, 2),
+            }
+        else:
+            sensor = SpectralAnalyzer(top_k=2)
+            data_matrix = np.ascontiguousarray(np.column_stack((log_returns, volumen_z)), dtype=np.float64)
+            fft_results = sensor.analyze(data_matrix, dt=dt_val)
+
         periodos_retornos = fft_results[0]["periods"]
         periodos_volumen = fft_results[1]["periods"]
 
@@ -1228,7 +1600,15 @@ class KinetopusHeadlessPipeline:
                     "note": "Ninguna tolerancia de rescate alcanzó R² >= 0.40 con física estable; proyección Monte Carlo degradada por seguridad.",
                 }
 
-        # 5. Integración Simbólica Rápida (Solución Espectral 2x2 para Grado 1 + Daemon Thread para Grado >= 2)
+        # Variedad nominal centrada por mínimos cuadrados (compartida entre JSON y gráficos)
+        nominal_smooth = self.compute_nominal_smooth(
+            raw_price=precio_raw,
+            r_smooth=core_out["r_smooth"],
+            triggers=core_out["cusum_report"]["shift_indices"],
+            disable_returns=cfg.disable_returns,
+        )
+
+        # 5. Integración Simbólica Rápida
         symbolic = SymbolicTranslator(active_rep)
         p0_sym = float(precio_raw[-1]) if cfg.disable_returns else float(log_returns[-1] * 100.0)
         v0_sym = float(core_out["v_smooth"][-1])
@@ -1240,7 +1620,7 @@ class KinetopusHeadlessPipeline:
         )
         geogebra_script = symbolic.generate_geogebra_commands()
 
-        # 6. Doble Sello de Fiabilidad Física (Ljung-Box + Mini Walk-Forward)
+        # 6. Doble Sello de Fiabilidad Física (Ljung-Box + Mini Walk-Forward Estricto)
         lb_seal = self._compute_ljung_box_seal(
             log_returns=log_returns,
             r_smooth=core_out["r_smooth"],
@@ -1263,6 +1643,7 @@ class KinetopusHeadlessPipeline:
             self._extract_geometry_and_forensics(
                 dates_active=dates_active,
                 precio_raw=precio_raw,
+                nominal_smooth=nominal_smooth,
                 log_returns=log_returns,
                 r_smooth=core_out["r_smooth"],
                 r_dot=core_out["r_dot"],
@@ -1279,13 +1660,23 @@ class KinetopusHeadlessPipeline:
             )
         )
 
-        # 8. KPIs Ejecutivos y Veredicto Sintético de Confianza
+        # 8. KPIs Ejecutivos, Resumen del Doble Sello y Veredicto de Confianza
         r_dot_last = float(core_out["r_dot"][-1])
         vel_pct = r_dot_last * 100.0 if not cfg.disable_returns else r_dot_last
         r2_val = float(active_rep.get("score", 0.0))
         tension_ratio = float(cusum_forensics["current_tension"]["tension_ratio"])
         is_unstable = bool(forecast_dict["unstable_flag"])
+        empty_eq = bool(forecast_dict["empty_return_equation"])
         phys_class = wf_seal.get("asset_physics_class", "NO_EVALUADO")
+
+        double_seal = self.evaluate_double_seal(
+            lb_seal=lb_seal,
+            wf_seal=wf_seal,
+            active_r2=r2_val,
+            tension_ratio=tension_ratio,
+            is_unstable=is_unstable,
+            empty_eq=empty_eq,
+        )
 
         confidence_reasons: List[str] = []
         if is_unstable:
@@ -1305,17 +1696,22 @@ class KinetopusHeadlessPipeline:
             if phys_class == "COHERENTE_INERCIAL":
                 score_pts += 2
                 confidence_reasons.append(
-                    f"Activo físicamente coherente en Walk-Forward ({wf_seal.get('consensus_hit_ratio_pct')}% HR OOS)."
+                    f"Activo físicamente coherente en Walk-Forward ({wf_seal.get('consensus_hit_ratio_pct')}% HR OOS en {wf_seal.get('effective_cuts')} cortes)."
                 )
             elif phys_class == "TRANSICIONAL_BORDE":
                 score_pts += 1
                 confidence_reasons.append(
-                    f"Coherencia OOS intermedia ({wf_seal.get('consensus_hit_ratio_pct')}% HR)."
+                    f"Coherencia OOS intermedia ({wf_seal.get('consensus_hit_ratio_pct')}% HR en {wf_seal.get('effective_cuts')} cortes)."
                 )
-            elif phys_class == "EXOGENO_FUNDAMENTALISTA":
+            elif phys_class == "INSUFICIENTE":
                 score_pts -= 2
                 confidence_reasons.append(
-                    f"Alerta Caso GLD: Walk-Forward OOS bajo ({wf_seal.get('consensus_hit_ratio_pct')}% HR < 50%)."
+                    f"Sello OOS INSUFICIENTE ({wf_seal.get('effective_cuts', 0)}/{wf_seal.get('min_required_effective_cuts', 5)} cortes efectivos de ventana completa)."
+                )
+            elif phys_class in ("EXOGENO_FUNDAMENTALISTA", "INESTABLE_O_RUIDO_EXTREMO"):
+                score_pts -= 2
+                confidence_reasons.append(
+                    f"Alerta Caso GLD / Exógeno: Walk-Forward OOS reprobado ({wf_seal.get('consensus_hit_ratio_pct', 0.0)}% HR)."
                 )
 
             if tension_ratio > 0.85:
@@ -1327,7 +1723,11 @@ class KinetopusHeadlessPipeline:
                 score_pts += 1
                 confidence_reasons.append(f"Régimen CUSUM destensado ({tension_ratio:.0%} de H).")
 
-            if score_pts >= 4:
+            if not double_seal["seal_passed"]:
+                confidence_tier = "BAJA_CAUTELA"
+            elif double_seal["seal_grade"] == "APROBADO_CONDICIONAL":
+                confidence_tier = "MEDIA" if score_pts >= 2 else "BAJA_CAUTELA"
+            elif score_pts >= 4:
                 confidence_tier = "ALTA"
             elif score_pts >= 2:
                 confidence_tier = "MEDIA"
@@ -1339,7 +1739,7 @@ class KinetopusHeadlessPipeline:
 
         telemetry: Dict[str, Any] = {
             "metadata": {
-                "engine": "KineTopus Headless Engine v2.1",
+                "engine": "KineTopus Headless Engine v2.2",
                 "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "total_runtime_ms": round(total_ms, 2),
                 "config": asdict(cfg),
@@ -1392,6 +1792,7 @@ class KinetopusHeadlessPipeline:
                 "geogebra_commands": geogebra_script.strip(),
             },
             "reliability_seal": {
+                "double_seal_summary": double_seal,
                 "ljung_box_whiteness": lb_seal,
                 "mini_walk_forward_oos": wf_seal,
             },
@@ -1402,26 +1803,27 @@ class KinetopusHeadlessPipeline:
 
         pred_dict = active_rep.get("prediction", {})
         arrays_bundle: Dict[str, Any] = {
-            "t": t,
+            "t": np.ascontiguousarray(t, dtype=np.float64),
             "dates_active": dates_active,
-            "full_t": global_t,
-            "full_raw_price": price_full,
-            "raw_price": precio_raw,
-            "log_returns": log_returns,
-            "r_smooth": core_out["r_smooth"],
-            "r_dot": core_out["r_dot"],
-            "r_dot2": core_out["r_dot2"],
-            "v_smooth": core_out["v_smooth"],
-            "v_dot": core_out["v_dot"],
-            "cusum_s_pos": core_out["cusum_report"]["s_pos"],
-            "cusum_s_neg": core_out["cusum_report"]["s_neg"],
+            "full_t": np.ascontiguousarray(global_t, dtype=np.float64),
+            "full_raw_price": np.ascontiguousarray(price_full, dtype=np.float64),
+            "raw_price": np.ascontiguousarray(precio_raw, dtype=np.float64),
+            "nominal_smooth": np.ascontiguousarray(nominal_smooth, dtype=np.float64),
+            "log_returns": np.ascontiguousarray(log_returns, dtype=np.float64),
+            "r_smooth": np.ascontiguousarray(core_out["r_smooth"], dtype=np.float64),
+            "r_dot": np.ascontiguousarray(core_out["r_dot"], dtype=np.float64),
+            "r_dot2": np.ascontiguousarray(core_out["r_dot2"], dtype=np.float64),
+            "v_smooth": np.ascontiguousarray(core_out["v_smooth"], dtype=np.float64),
+            "v_dot": np.ascontiguousarray(core_out["v_dot"], dtype=np.float64),
+            "cusum_s_pos": np.ascontiguousarray(core_out["cusum_report"]["s_pos"], dtype=np.float64),
+            "cusum_s_neg": np.ascontiguousarray(core_out["cusum_report"]["s_neg"], dtype=np.float64),
             "cusum_triggers": core_out["cusum_report"]["shift_indices"],
             "boundaries": core_out["boundaries"],
-            "det_t_path": np.asarray(pred_dict.get("det_t_path", []), dtype=np.float64),
-            "det_price_path": np.asarray(pred_dict.get("det_price_path", []), dtype=np.float64),
-            "det_r_pct_path": det_r_pct_path,
-            "det_v_path": det_v_path,
-            "mc_t_path": np.asarray(pred_dict.get("t_path", []), dtype=np.float64),
+            "det_t_path": np.ascontiguousarray(pred_dict.get("det_t_path", []), dtype=np.float64),
+            "det_price_path": np.ascontiguousarray(pred_dict.get("det_price_path", []), dtype=np.float64),
+            "det_r_pct_path": np.ascontiguousarray(det_r_pct_path, dtype=np.float64),
+            "det_v_path": np.ascontiguousarray(det_v_path, dtype=np.float64),
+            "mc_t_path": np.ascontiguousarray(pred_dict.get("t_path", []), dtype=np.float64),
             "mc_price_percentiles": pred_dict.get("price_percentiles", []),
         }
 

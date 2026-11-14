@@ -1,58 +1,65 @@
 ---
 name: kinetopus-analyst
 description: >-
-  Executes standardized White-Box physical-quantitative asset analysis using the
-  KineTopus-Pro CLI. Use this skill whenever the user asks to analyze a financial
-  asset, ticker (crypto, stock, ETF, index, commodity, FX), or CSV time series with
-  KineTopus, evaluate market inertia/regimes, extract SINDy differential equations,
-  or forecast price trajectories.
+  Executes standardized White-Box Multi-Lens physical-quantitative asset analysis using the
+  KineTopus-Analyst CLI (`kinetopus_pro`). Use this skill whenever the user asks to analyze a
+  financial asset, ticker (crypto, stock, ETF, index, commodity, FX), or CSV time series with
+  KineTopus, evaluate market inertia/regimes across context windows, extract SINDy differential
+  equations, or forecast price trajectories.
 ---
 
-# KineTopus-Pro Standardized Quantitative Analysis Protocol
+# KineTopus-Analyst Standardized Multi-Lens Protocol (Hito 2)
 
-Follow this strict 4-step protocol to analyze any asset or time series with **zero numerical hallucination**, combining deterministic/stochastic physics (`SINDy` + `CUSUM` + `Euler-Maruyama`) via `kinetopus-engine` with real-world macro/event forensics.
+Follow this strict 4-step protocol to analyze any asset or time series with **zero numerical hallucination**, combining Multi-Lens physics (`2000v` Background · `1000v` Confirmation · `500v` Timing), strict full-window Walk-Forward validation, tiered visual inspection, and high-impact two-part storytelling.
 
-## Step 1: Run the Headless Engine CLI
+## Step 1: Run the Multi-Lens Headless CLI
 
-By default, run a **single timeframe (`1d` / `5y`)** matching the production reference. Run additional timeframes (`1wk`, `1h`) **only** if the user explicitly requests them.
+By default, run a single daily (`1d`) Multi-Lens pass (`10y` base download with automatic `max` fallback when `10y` lacks full-window Walk-Forward span for `2000v`):
 
 ```powershell
-& "C:\Users\ussaa\AppData\Local\Programs\Python\Python314\python.exe" -m kinetopus_pro.cli --ticker "<TICKER>" --period 5y --interval 1d
+& "C:\Users\ussaa\AppData\Local\Programs\Python\Python314\python.exe" -m kinetopus_pro.cli --ticker "<TICKER>" --interval 1d
 ```
 
-*(Alternatively, inside the `KineTopus-Pro` repo root you can run `scripts/kinetopus_analyze.py` with the same flags.)*
-
 * For a local CSV file: replace `--ticker` with `--csv "<PATH>"` (add `--classic-price --disable-norm` only for idealized classical physics datasets).
-* Capture the JSON summary printed to stdout, specifically `report_dir`, `telemetry_json`, and `dashboard_png`.
+* Capture the JSON summary printed to stdout: `report_dir`, `confluence_json`, `confluence_png`, and `lenses` (`lens_2000`, `lens_1000`, `lens_500`).
 
-## Step 2: Dual-Channel Inspection (Mandatory)
+## Step 2: Tiered Quantitative & Visual Inspection (Mandatory)
 
-You MUST inspect **both** outputs using `read_file` before writing a single word of analysis:
+You MUST inspect both the telemetry JSONs and rendered PNGs using `read_file` **before** writing a single word of analysis:
 
-1. **Quantitative Channel (`telemetry.json`):**
-   * `calibration`: Check `effective_cusum_k`, `effective_smooth_tol`, and whether `autopilot_rescue.applied` was triggered.
-   * `executive_kpis` & `reliability_seal`: Check `overall_physical_confidence`, `ljung_box_whiteness.verdict`, and `mini_walk_forward_oos` (`asset_physics_class` and `consensus_hit_ratio_pct`).
-     * If `asset_physics_class == "EXOGENO_FUNDAMENTALISTA"` (<50% OOS HR), issue an explicit **"Alerta Caso GLD"** warning that exogenous/macro shocks override $(r, V)$ inertia.
-   * `white_box_physics`: Read the exact `active_equations` ($\mathrm{d}r/\mathrm{d}t$ and $\mathrm{d}V/\mathrm{d}t$), `active_r2_score`, `residual_sigma_r`, and `analytical_sympy_solution`. Translate each non-zero coefficient physically (e.g., positive $r$ = self-reinforcing momentum; negative $r$ = mean-reverting friction; $V$ coupling = volume propulsion vs. absorption drag).
-   * `geometry_and_phase_space`: Read `kinematics.quadrant` ($\dot{r}$ vs. $\ddot{r}$), `recent_velocity_reversals`, `recent_acceleration_inflections`, and `phase_space.topology_class`.
-   * `cusum_forensics` & `forecast_cone`: Read `active_regime_start_date`, `macro_breaks`, `active_regime_top_anomalies`, `invalidation_levels_1candle`, and `horizon_checkpoints` ($t+1, t+5, t+15, t+30, t+60, t+150$).
-2. **Visual Channel (`dashboard.png`):**
-   * Call `read_file` on `dashboard.png` to visually verify all 5 panels: spline fit fidelity vs. raw price scatter, cone spread/curvature, derivative zero-crossings, phase-space orbit vs. projected attractor, and CUSUM tension spikes.
+### 2A. Quantitative Channel
+1. Read `confluence.json` first:
+   * Check `metadata.download` (`effective_period_used`, `fallback_to_max_triggered`, `total_downloaded_candles`).
+   * Enforce the **Fixed Hierarchy without Promotions** (`hierarchy_verdict`):
+     * `2000v` = **Tendencia de Fondo** (`MACRO_FONDO`). If `N/D` or if `seal_passed == false` (`EXOGENO_FUNDAMENTALISTA` or `INSUFICIENTE` with `< 5` effective full-window OOS cuts), the background trend MUST remain `INDETERMINADA` / `N/D` and global confidence CANNOT exceed `BAJA_CAUTELA`. The `1000v` lens NEVER replaces `2000v`.
+     * `1000v` = **Confirmación de Medio Plazo** (`MEDIO_CONFIRMACION`).
+     * `500v`  = **Timing Táctico** (`CORTO_TIMING`).
+2. Read each available `lens_<W>/telemetry.json`:
+   * Extract `calibration` (`effective_cusum_k`, `effective_smooth_tol`, `autopilot_rescue`), `white_box_physics` (`active_equations`, `active_r2_score`, `linear_stability_spectrum`), `reliability_seal` (`double_seal_summary`, `ljung_box_whiteness`, `mini_walk_forward_oos` with `effective_cuts`), `geometry_and_phase_space` (`quadrant`, `price_vs_spline_gap_pct`, `last_30c_mean_gap_pct`, reversals/inflections, `rotation_sense`), `cusum_forensics` (`window_max_tension_peak`, `invalidation_levels_1candle`, `macro_breaks`, `active_regime_top_anomalies`), and `forecast_cone.horizon_checkpoints`.
 
-## Step 3: CUSUM Event Forensics & Catalyst Radar (`search_web`)
+### 2B. Tiered Visual Channel & Per-Panel Checklist (Refuerzo D)
+1. **Tier 1 (Always Mandatory):** Call `read_file` on `confluence.png` AND every available `lens_<W>/dashboard.png` (`2000`, `1000`, `500`).
+2. **Tier 2 (On Ambiguity or Discrepancy):** Open individual high-res panels in `lens_<W>/panels/01..06.png` whenever an annotation looks crowded, a tactical turn is subtle, or a visual pattern appears to contradict the JSON numbers.
+3. **Mandatory Per-Panel Checklist & Cross-Audit ("Lo que veo vs. Lo que dice el JSON"):**
+   * **Confluence Chart (`confluence.png`):** Are the 3 splines (`2000v` sky-blue, `1000v` amber, `500v` emerald) fanning out in alignment, or is raw price breaking away from the slower curves in Panel 2 (`~220v` zoom)? Do the 3 velocity curves in Panel 3 cross `0` in sequence or diverge?
+   * **Panels 1 & 2 (Macro Price + Tactical Zoom `120v + t+60`):** Is raw daily price sitting above or below the $C^2$ spline over the last 20–60 candles? Do recent swing highs/lows respect or threaten the dotted CUSUM invalidation lines? Is the Monte Carlo cone visibly skewed?
+   * **Panels 3 & 4 ($\dot{r}$ and $\ddot{r}$):** Do the visual slopes and dated zero-crossing markers match the JSON `quadrant`? Is $\dot{r}$ approaching `0` (imminent turn) even while still positive/negative?
+   * **Panel 5 (Phase-Space Attractor):** Do the directional arrows confirm clockwise/counter-clockwise flow and compression vs. centrifugal escape?
+   * **Panel 6 (CUSUM Tension):** Did `window_max_tension_peak` brush near $H=5.0$ (a near-break stress test) even if `macro_breaks` is empty?
+   * **Declare any discrepancy explicitly** in Part 2 (e.g., when a secular spline remains `ALCISTA` in JSON while raw candles in the Tactical Zoom show a multi-week pullback below the manifold).
 
-Honor Principle #2 (*"Mathematics models the rule; AI explains the anomaly"*):
+## Step 3: CUSUM Event Forensics & Traditional Analyst Consensus (`search_web`)
 
-1. **Origin of the Active Regime:** Search the web (`search_web`) around `cusum_forensics.active_regime_start_date` (and the most extreme dates in `active_regime_top_anomalies` or the latest `macro_breaks`) for `<TICKER>` + macro news to identify **what real-world event birthed the current physical regime**.
-2. **Upcoming Catalyst Radar:** Search current news/macro calendar for `<TICKER>` (central bank decisions, CPI/jobs data, earnings, regulatory rulings, ETF/liquidity flows) that could push price past `invalidation_levels_1candle` (`upside_regime_break_price` / `downside_regime_break_price`) and break the $H=5.0$ CUSUM boundary.
+1. **CUSUM Forensics & Upcoming Catalysts:** Search the web around key `active_regime_start_date`, `macro_breaks`, or `window_max_tension_peak` dates to explain what real-world shock caused them, and identify upcoming macro/earnings/liquidity catalysts that could breach the 1-candle CUSUM invalidation levels.
+2. **Cited Web Analyst Consensus (Part 2 Contrast):** Search current market/technical analyst coverage on the web for `<TICKER>` (support/resistance levels, trend bias, flow narrative) **citing the sources explicitly**. Do NOT compute local classical indicators (`RSI`/`EMA`/`MACD`) in Python; contrast KineTopus strictly against cited external analyst consensus.
 
-## Step 4: Dual Deliverable (Artifact + Persistent Audit Log)
+## Step 4: Two-Part High-Impact Deliverable (Artifact + Persistent `analysis.md`)
 
-Read [report_template.md](./references/report_template.md) and follow its structure strictly:
+Read [report_template.md](./references/report_template.md) and follow its exact **Two-Part Structure**:
 
-1. **Stage the PNG for Artifact Embedding:** Copy `dashboard.png` into your conversation's `<Artifact Directory Path>` (e.g., `dashboard_<SANITIZED_TICKER>.png`) using PowerShell `Copy-Item`, and embed it via its absolute artifact path.
-2. **Formatting Rules:** Escape every literal currency dollar sign in prose as `\$` (e.g., `\$92,450.00`) so KaTeX never turns prose into broken math. Reserve `$$...$$` and `$...$` strictly for actual LaTeX equations.
+1. **Stage PNGs for Artifact Embedding:** Copy `confluence.png` and the available `lens_<W>/dashboard.png` files into `<Artifact Directory Path>` (e.g., `confluence_<TICKER>.png`, `dashboard_<TICKER>_2000v.png`, etc.) and embed them via their absolute artifact paths (using a `carousel` block in Part 2 of the Artifact for the 3 lens dashboards).
+2. **Formatting Rules:** Escape every literal currency dollar sign in prose/tables as `\$` (e.g., `\$69,328.06`) so KaTeX never corrupts prose. Reserve `$...$` and `$$...$$` strictly for real mathematical expressions. Use internal direct tone without legal disclaimers for now.
 3. **Write Both Copies:**
-   * Create the user-facing **Artifact** in `<Artifact Directory Path>` (`ArtifactMetadata` with `UserFacing=true`, `RequestFeedback=false`).
-   * Save an archival copy to `<report_dir>/analysis.md` (replacing the embedded image path with `./dashboard.png` so the local `reports/<TICKER>/<TIMESTAMP>/` folder is 100% self-contained alongside `telemetry.json` and `dashboard.png`).
-4. **Chat Response:** Keep the chat reply concise — point to the Artifact and the saved folder in `reports/`, highlighting only the executive verdict and key invalidation levels.
+   * User-facing **Artifact** in `<Artifact Directory Path>` (`UserFacing=true`, `RequestFeedback=false`).
+   * Self-contained archival copy at `<report_dir>/analysis.md` rewriting embedded image paths to `./confluence.png` and `./lens_<W>/dashboard.png`.
+4. **Chat Response:** Keep the chat summary concise, pointing to the Artifact and `<report_dir>/analysis.md` with the 1-minute verdict and key levels.

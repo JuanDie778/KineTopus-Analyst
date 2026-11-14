@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kinetopus-pro"
-version = "0.1.0"
-description = "KineTopus-Pro: Headless Quantitative Regime Radar, Reliability Seals, Multi-Panel Renderer & Agentic Analyst Suite"
+version = "0.2.0"
+description = "KineTopus-Pro: Hierarchical Multi-Lens Quantitative Regime Radar, Strict Reliability Seals, Multi-Panel Renderer & Agentic Analyst Suite"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary - All Rights Reserved" }
