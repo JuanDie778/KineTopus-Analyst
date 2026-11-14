@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=65.5.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kinetopus-pro"
+version = "0.1.0"
+description = "KineTopus-Pro: Headless Quantitative Regime Radar, Reliability Seals, Multi-Panel Renderer & Agentic Analyst Suite"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary - All Rights Reserved" }
+dependencies = [
+    "kinetopus-engine>=2.0.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+kinetopus-analyze = "kinetopus_pro.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kinetopus_pro", "kinetopus_pro.*"]

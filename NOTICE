@@ -1,0 +1,9 @@
+KineTopus-Pro (Proprietary Software - All Rights Reserved)
+
+This product builds upon the open-source scientific core `kinetopus-engine`
+(Apache License, Version 2.0) as an external library dependency via
+`kinetopus_pro.engine_bridge`, without modifying or relicensing the upstream
+scientific codebase.
+
+Upstream Open-Source Core:
+- KineTopus Engine (Apache-2.0): https://github.com/JuanDie778/KineTopus-Engine
