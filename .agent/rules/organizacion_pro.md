@@ -14,3 +14,5 @@ Eres el guardián de la arquitectura de **KineTopus-Pro** (producto cuantitativo
    * Si el Walk-Forward marca `EXOGENO_FUNDAMENTALISTA` (`< 50%` HR OOS), se debe emitir explícitamente la **"Alerta Caso GLD"** por encima de cualquier $R^2$ interno alto del spline.
 4. **Doble Canal Auditado y Trazabilidad:**
    * Cada corrida CLI debe persistir `telemetry.json` + `dashboard.png` en `reports/<TICKER>/<TIMESTAMP>/` y pasar validación visual + numérica antes de emitir conclusión al usuario.
+5. **Alineación con el Manifiesto de Producto (`docs/MANIFIESTO.md`):**
+   * Toda evolución de código, visualización, reporte, CLI o interfaz debe evaluarse poniéndose en el lugar del consumidor final del servicio: priorizar utilidad real como indicador para análisis técnico, sencillez e intuición, comodidad (*zero-friction*), portabilidad y accesibilidad hacia analistas/inversores, integraciones B2B (ej. *TradingView*, *Investing.com*) y público general.

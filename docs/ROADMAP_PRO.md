@@ -1,4 +1,6 @@
-# ROADMAP DE PRODUCTO — KINETOPUS-PRO
+# ROADMAP DE PRODUCTO — KINETOPUS-ANALYST (`kinetopus_pro`)
+
+> **Norte Estratégico:** Toda iteración de este roadmap se rige por [docs/MANIFIESTO.md](MANIFIESTO.md) (utilidad real como indicador técnico, sencillez e intuición, comodidad, portabilidad y accesibilidad).
 
 ## Hito 1: Base Headless, CLI Estandarizado y Skill Agéntica
 **Estado:** ✅ COMPLETADO (`v0.1.0`)
@@ -20,6 +22,8 @@
 
 ---
 
-## Hito 4: Empaquetado API / Servicio Comercial
+## Hito 4: Empaquetado de Servicio, API e Indicador Portable
 **Estado:** 📋 IDEACIÓN
-- Exponer reportes JSON + visualizaciones en API local/privada o bot de alertas de invalidación CUSUM y cambios de régimen.
+- **Consumo Directo (Analistas / Público General):** Reportes ejecutivos intuitivos, visualizaciones claras y flujo *plug-and-play* de baja fricción (CLI, Skill/MCP o interfaz ligera).
+- **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Endpoints/feeds JSON portables, indicador estructurado de régimen/invalidación CUSUM y widgets embebibles ligeros.
+- **Alertas Activas:** Bot/servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$) y transiciones de coherencia OOS.
