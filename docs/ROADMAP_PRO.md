@@ -18,23 +18,31 @@
 
 ---
 
-## Hito 2.5 / v0.3.0: Estándar Definitivo de Análisis, Cono Calibrado y `report.html` Interactivo
+## Hito 2.5: Estándar de Análisis, Cono Calibrado y `report.html` Interactivo
 **Estado:** ✅ COMPLETADO (`v0.3.0`)
-- **Rama 1 — Precisión del Cono y Régimen:** Cono Monte Carlo de integración simple en log-precio con volatilidad EWMA (`span=30`, $N=2,000$), métrica no bloqueante de cobertura empírica OOS (`cone_calibration`), `Autopilot 2D` alineado a `R² >= 0.35`, nueva jerarquía centrada en **`1000v` como Lente Principal Predictiva** (`2000v` Contexto de Fondo, `500v` Sensor de Alerta sin rangos), regla estricta `"Sin escenario predictivo validado hoy"` si falla `1000v`, y taxonomía humana de 5 estados (`Lateral en máximos`, `sobreextendido`, etc.).
-- **Rama 2 — Limpieza Visual y Gráfico Héroe:** `hero.png` de 1 solo panel con velas OHLC, cortes limpios en quiebres CUSUM (`"Nuevo régimen · YYYY-MM-DD"`), regla derecha de niveles sin solapes, omisión de conos reprobados, 100% español humano sin enums crudos y exposición al cliente enfocada en `hero.png` + dashboard `1000v` (conservando las 3 lentes en disco para el agente).
-- **Rama 3 — Narrativa de Escenarios Operativos:** 3 escenarios calculados por el motor (*Base*, *Alcista*, *Bajista*) con probabilidad de primer toque antes de `t+150` y estructura fija de `6 + 6` bloques ejecutivos/técnicos.
-- **Rama 4 — Presentación Dual en Dos Etapas (`report.html` + `analysis.md`):** Entregable interactivo offline autocontenido (`plotly.min.js` + Jinja2, tema Oscuro/Claro en vivo, 3 pestañas, selector `1S / 1M / 3M / t+150 / Vista Héroe`) y flujo `--render-report` donde el motor inyecta el 100% de las cifras y `narrative.json` aporta el análisis cualitativo. Validado de extremo a extremo con `BTC-USD` y `SPY`.
+- **Cono de Integración Simple EWMA y Taxonomía Humana:** Cono Monte Carlo en log-precio con volatilidad EWMA (`span=30`, $N=2,000$), métrica no bloqueante de cobertura empírica OOS (`cone_calibration`), jerarquía centrada en `1000v` y taxonomía humana de 5 estados (`Lateral en máximos`, `sobreextendido`, etc.). *(Nota: los bloqueos por OOS/`R²` y la supresión de `t+150` en `500v` presentes en `v0.3.0` fueron superados en `v0.3.1`.)*
+- **Presentación Dual en Dos Etapas (`report.html` + `analysis.md`):** Entregable interactivo offline autocontenido (`plotly.min.js` + Jinja2, tema Oscuro/Claro, 3 pestañas de `6 + 6` bloques) y flujo `--render-report` con cifras blindadas.
 
 ---
 
-## Hito 3: Escáner Multi-Activo de Regímenes Coherentes
+## Hito 2.6: Enfoque Geométrico Puro y 3 Lentes `t+150` Simultáneas
+**Estado:** ✅ COMPLETADO (`v0.3.1`, commit `050ceb3`, tag `v0.3.1`)
+- **Walk-Forward OOS Opcional (`--audit-oos`) y Cero Bloqueos:** Walk-Forward desactivado por defecto (`audit_oos=False`); eliminados el veto `"Sin escenario predictivo validado hoy"` y los cortes por `SINDy R² < 0.35`. *Autopilot 2D* solo interviene ante inestabilidad numérica o colapso `dr/dt = 0`.
+- **Proyección Simultánea `t+150` en las 3 Lentes y Ajuste Curva-Precio:** `2000v` (Cian), `1000v` (Ámbar, eje principal de escenarios `P25/P75`) y `500v` (Violeta) proyectan siempre `t+150` simultáneamente, reportando ajuste explícito `curve_price_fit` (`window_price_r2`, `mape_pct`, `rmse_price`).
+- **Historial 100% en `report_bundle.npz` y Selectores Interactivos:** Almacena la serie descargada completa (`h_start=0`), vista inicial `500v + t+150`, botones `[120v | 500v | 1000v | 2000v | Todo el historial]`, selector `[Cono: 1000v | 2000v | 500v | Sin cono]`, auto-escalado Y limpio y selector de los **3 dashboards técnicos** en Tab 3.
+- **Limpieza Geométrica sin Barreras CUSUM de 1 Vela:** Retiradas las líneas punteadas intradía (`up_brk` / `dn_brk`) de `hero.png`, Paneles 1–2, regla derecha y escenarios; auditoría histórica CUSUM preservada intacta en Sección 2.5 y Panel 6. Validado con `15/15` tests en verde y corrida real `BTC-USD`.
+
+---
+
+## Hito 3: Escáner Multi-Activo y Multi-Serie (`v0.4.0`)
 **Estado:** 📋 PLANIFICADO
-- Ejecutar barridos en lote sobre listas de seguimiento (Acciones, ETFs, Índices, FX, Cripto) filtrando y clasificando activos según validación de la Lente Principal (`1000v`), taxonomía humana de 5 estados, cobertura empírica del cono y cercanía a fronteras CUSUM o pines de alerta `500v`.
+- **Radar Práctico y Motor de Barrido Transversal:** Soportar lotes mixtos de tickers de *Yahoo Finance* (Acciones, ETFs, Índices, FX, Cripto) y archivos CSV locales (incluidos pares acoplados `(X, Y)` no financieros bajo `--classic-price` que puedan contener ceros o valores negativos).
+- **Tabla Maestra Determinista (`JSON` / `CSV`) y Síntesis Ejecutiva:** Consolidar para cada serie el estado humano de las 3 lentes (`2000v / 1000v / 500v`), brechas precio-curva `%`, ajuste Curva-Precio (`R²`, `MAPE`), proyecciones simultáneas `t+150`, arquetipo/autovalores SINDy + sentido de giro orbital, y fechas/scores de quiebres o picos históricos CUSUM (incorporando cobertura y métricas OOS cuando se active `--audit-oos`), cuidando descarga/caché eficiente y ejecución paralela segura dentro de la Regla de 16 GB RAM.
 
 ---
 
 ## Hito 4: Empaquetado de Servicio, API e Indicador Portable
 **Estado:** 📋 IDEACIÓN
 - **Consumo Directo (Analistas / Público General):** Reportes interactivos `report.html` autocontenidos y flujo *plug-and-play* de baja fricción (CLI, Skill/MCP o interfaz web ligera).
-- **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Endpoints/feeds JSON portables (`confluence.json`), indicador estructurado de régimen/invalidación CUSUM multi-escala y widgets embebibles ligeros.
-- **Alertas Activas:** Servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$), pines tácticos del Sensor de Alerta (`500v`) y transiciones de validación OOS en `1000v`.
+- **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Endpoints/feeds JSON portables (`confluence.json` y salidas del Escáner Multi-Serie), indicador estructurado de régimen/curvas multi-escala y widgets embebibles ligeros.
+- **Alertas Activas:** Servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$), pines tácticos del pulso `500v` y transiciones de régimen o divergencia entre las 3 lentes (`2000v / 1000v / 500v`).

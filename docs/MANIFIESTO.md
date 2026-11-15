@@ -62,7 +62,7 @@ El servicio está orientado a tres horizontes complementarios:
 ## 5. Principios Inquebrantables de Gobernanza (Ciencia + Producto)
 
 1. **Honestidad Epistémica antes que Sobre-Operar:**
-   * El servicio protege al usuario advirtiendo explícitamente cuando la inercia interna pierde validez frente a catalizadores macroeconómicos mediante el **Doble Sello de Fiabilidad** (`Ljung-Box` + `Mini Walk-Forward OOS`, incluyendo la *Alerta Caso GLD* cuando el acierto fuera de muestra cae bajo el umbral operable).
+   * El servicio protege al usuario exponiendo con transparencia el ajuste Curva-Precio (`R²`, `MAPE`), la diagnosis residual (`Ljung-Box`), los quiebres históricos de régimen (`CUSUM`) y la auditoría Walk-Forward OOS opcional (`--audit-oos`) para distinguir inercia interna frente a choques exógenos sin ocultar incertidumbre.
 2. **Caja Blanca sin Alucinaciones:**
    * Cero cajas negras opacas y cero cifras inventadas. La capa de IA y los reportes traducen fielmente las matrices, ecuaciones y geometrías calculadas por el motor, conectando únicamente los residuos o quiebres con contexto verificable del mundo real.
 3. **Filtro Norte de Desarrollo:**

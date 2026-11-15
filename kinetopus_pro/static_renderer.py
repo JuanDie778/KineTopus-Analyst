@@ -1,13 +1,14 @@
 """
-Renderizador Estático de Estándar Financiero (`Matplotlib Agg`) — Estándar Definitivo v0.3.0.
+Renderizador Estático de Estándar Financiero (`Matplotlib Agg`) — Enfoque Geométrico Puro `v0.3.1`.
 
-Implementa la limpieza visual acordada (Decisiones 7, 8, 9 y 17):
+Implementa la limpieza visual acordada (`hero.png` + 3 dashboards técnicos de 6 paneles):
   - Paleta unificada tipo terminal financiera (`dark` por defecto + `light`), compartida con `report.html`.
   - `render_hero_chart` (`hero.png`, más alias `render_confluence_chart`): Gráfico Héroe de un solo
-    panel con velas japonesas (cuando hay OHLC) o curva limpia de cierre, `1000v` protagonista con
-    cono calibrado hasta `t+150`, `2000v` tenue de contexto, alertas puntuales de `500v` y Regla
-    Lateral de Niveles a la derecha sin solapamientos.
-  - Lentes sin Doble Sello se trazan en gris punteado y sin proyección ni cono.
+    panel con velas japonesas (cuando hay OHLC) o curva limpia de cierre, las 3 lentes proyectando
+    simultáneamente `t+150` (`2000v` Cian, `1000v` Ámbar protagonista + cono EWMA calibrado, `500v`
+    Violeta + alertas puntuales) y Regla Lateral de Niveles a la derecha sin solapamientos.
+  - Eliminación total de líneas horizontales CUSUM de 1 vela en `hero.png` y Paneles 1–2 de `dashboard.png`,
+    conservando el forense histórico CUSUM en el Panel 6.
   - Cortes limpios por régimen en cada quiebre CUSUM (`Nuevo régimen · YYYY-MM-DD`), erradicando los
     escalones verticales artificiales tanto en `hero.png` como en `dashboard.png`.
   - Traducción 100% humana en español (cero `ENUM_STRINGS` internos en títulos, subtítulos o leyendas)
