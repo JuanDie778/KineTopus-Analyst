@@ -1,4 +1,4 @@
-# ARQUITECTURA OPEN-CORE — KINETOPUS-PRO (`v0.2.0`)
+# ARQUITECTURA OPEN-CORE — KINETOPUS-PRO (`v0.3.0`)
 
 ## 1. Frontera de Desacoplamiento (`engine_bridge.py`)
 `KineTopus-Analyst` (`kinetopus_pro`) consume el motor científico `kinetopus-engine` exclusivamente a través de `kinetopus_pro/engine_bridge.py`, manteniendo el repositorio base 100% intacto:
@@ -15,39 +15,33 @@
 
 ---
 
-## 2. Orquestación Multi-Lente Jerárquica (`kinetopus_pro.multi_lens`)
-Por defecto (`kinetopus-analyze --ticker <SYM>`), `KinetopusMultiLensRunner` evalúa simultáneamente tres escalas de contexto sobre una **única descarga**:
+## 2. Jerarquía Multi-Lente Centrada en `1000v` (`kinetopus_pro.multi_lens`)
+Por defecto (`kinetopus-analyze --ticker <SYM>`), `KinetopusMultiLensRunner` evalúa tres escalas sobre una **única descarga inteligente** (`10y` con respaldo automático a `max` cuando `< 2,690` velas), conservando OHLC completo (`np.float64` `C_CONTIGUOUS`) para renderizado de velas:
 
-1. **Descarga Inteligente (`10y` → `max`):** Solicita `10y` en `yfinance`; si el activo devuelve `< 2,690` velas (típico de acciones/ETFs de ~252 sesiones/año al requerir holgura para `10` cortes OOS de `2,000` velas completas), amplía automáticamente a `max` en una sola petición de respaldo.
-2. **Ejecución Paralela y Degradación Limpia:** Lanza las 3 lentes (`2000v`, `1000v`, `500v`) en paralelo mediante `ProcessPoolExecutor` (`max_workers <= 3`, arreglos `np.float64` `C_CONTIGUOUS` aptos para 16 GB RAM). Si un activo joven posee `< W` velas totales, esa lente se reporta como `"N/D"` sin abortar las demás.
-3. **Jerarquía Fija sin Votación ni Promociones (`_synthesize_fixed_hierarchy`):**
-   - `2000v` (`MACRO_FONDO`): **Tendencia de Fondo**. Si es `"N/D"` o reprueba su Doble Sello, el fondo queda `INDETERMINADA` / `N/D` (nunca es suplantado por `1000v`) y la confianza física global se limita como máximo a `BAJA_CAUTELA`.
-   - `1000v` (`MEDIO_CONFIRMACION`): **Confirmación de Medio Plazo**. Confirma o diverge respecto al fondo únicamente si supera su propio Doble Sello.
-   - `500v` (`CORTO_TIMING`): **Timing Táctico**. Mide aceleración reciente, brecha contra el spline y proximidad a fronteras CUSUM.
+1. **`1000v` (`PRINCIPAL_PREDICTIVA` — Lente Principal Predictiva):** Única lente autorizada para emitir rangos de precio (`1s · 1m · 3m · t+150`), cono Monte Carlo calibrado y los 3 escenarios probabilísticos (*Base*, *Alcista*, *Bajista*).
+2. **`2000v` (`CONTEXTO_FONDO` — Contexto de Fondo):** Aporta la marea estructural de largo plazo sin emitir escenarios rivales.
+3. **`500v` (`SENSOR_ALERTA` — Sensor de Alerta):** Emitida exclusivamente como radar táctico (pines puntuales de giro $\dot{r}=0$, tensión CUSUM $\ge 70\% H$ y estiramiento estadístico), suprimiendo conos y tablas de objetivos para evitar contradicciones.
+4. **Regla Estricta ante Fallo (Cero Promociones):** Si `1000v` es `"N/D"` o reprueba su Doble Sello (`seal_passed == False`), el sistema declara `"Sin escenario predictivo validado hoy"` y fija la confianza global en `"BAJA"`, prohibiendo promover `2000v` o `500v` como sustitutas predictivas.
 
 ---
 
-## 3. Pipeline Headless y Doble Sello Estricto (`kinetopus_pro.headless_pipeline` v2.2)
-Cada lente ejecuta de forma independiente y libre de fuga de futuro (*zero look-ahead*):
+## 3. Cono de Integración Simple EWMA, Taxonomía Humana y Escenarios (`kinetopus_pro.headless_pipeline` v0.3.0)
+Cada lente ejecuta de forma causal (*zero look-ahead*) hasta `horizon_steps = 150`:
 
-1. **Recorte Causal & Normalización Local:** Extrae las últimas `W` velas y normaliza retornos logarítmicos y volumen *in-window*.
-2. **FFT In-Process & Calibración Independiente:** Calcula los periodos dominantes FFT en el mismo proceso y calibra `k*` óptimo (`CUSUMAutoTuner` + rescate `Autopilot 2D` sobre tolerancias `0.0005`, `0.0001`, `0.00005` cuando hay inestabilidad con $R^2 \ge 0.40$).
-3. **Integración Espectral & Re-Anclaje por Mínimos Cuadrados:** Resuelve analíticamente el sistema EDO lineal `2x2` (`< 1 ms`), simula `1,000` trayectorias Euler-Maruyama (`seed=42`) y centra la variedad de precio nominal por régimen minimizando el residuo logarítmico medio.
-4. **Doble Sello Estricto (`evaluate_double_seal`):**
-   - **Walk-Forward Causal de Ventana Completa:** Cada corte histórico entrena con **exactamente `W` velas completas** (`len(p_train) == W`, cero ventanas truncadas) usando calibración rápida cacheada sobre el spline pre-suavizado del corte. Si se obtienen `< 5` cortes efectivos, el sello se declara `"INSUFICIENTE"` (`seal_passed = False`).
-   - **Pureza Interna y Blancura:** Exige `SINDy R² >= 0.35` más clase OOS `COHERENTE_INERCIAL` o `TRANSICIONAL_BORDE`, diferenciando `APROBADO_PLENO` (`Ljung-Box p > 0.05` y `HR >= 55%`) de `APROBADO_CONDICIONAL`.
+1. **Cono Monte Carlo Calibrado en Log-Precio (`_simulate_calibrated_single_integration_cone`):**
+   - Elimina la doble integración browniana sobre aceleración y modela shocks i.i.d. normales sobre incrementos de log-precio escalados por volatilidad EWMA RiskMetrics (`span=30`, winsorizada por MAD) anclada exactamente a la trayectoria determinista SINDy $F(t)$ ($\text{mediana} \equiv F(t)$, ancho $\propto \sigma_{\text{ewma}}\sqrt{k}$, $N=2,000$ trayectorias `np.float64` `C_CONTIGUOUS`).
+2. **Auditoría Empírica OOS del Cono (`cone_calibration`):**
+   - Durante el Walk-Forward causal de ventana completa (`len(p_train) == W`, mínimo `5` cortes efectivos, `R² >= 0.35`, `Autopilot 2D` alineado a `R² >= 0.35`), mide la cobertura empírica real de `P25–P75` (objetivo ~50%) y `P5–P95` (objetivo ~90%) como métrica transparente no bloqueante.
+3. **Taxonomía Humana de 5 Estados y Escenarios con Probabilidad de Primer Toque:**
+   - Clasifica cada lente en 5 estados legibles (`Impulso alcista`, `Alcista frenando`, `Lateral / Digestión` [`Lateral en máximos` cuando cotiza $\ge 95\%$ del techo de ventana], `Corrección bajista`, `Caída frenando / Suelo en formación`) + modificador de posición (`sobreextendido`, `descolgado`, `cerca de su curva`).
+   - Calcula para `1000v` las probabilidades de primer toque (*first-passage*) antes de `t+150` contra las fronteras CUSUM al cierre y las medianas condicionales post-ruptura.
 
 ---
 
-## 4. Renderizado Estático y Auditoría Visual (`kinetopus_pro.static_renderer`)
-Genera `22` artefactos gráficos oscuros (`Matplotlib Agg`, cierre explícito de figuras) por corrida Multi-Lente:
-
-- **`confluence.png` (`dpi=165`):** Lienzo ejecutivo maestro de 3 paneles (3 variedades Spline $C^2$ superpuestas + Zoom de confluencia `220v + t+60` + 3 curvas de velocidad $\dot{r}$ superpuestas).
-- **`lens_<W>/dashboard.png` (`dpi=160`):** Dashboard compuesto de **6 paneles** con carril lateral anti-colisión para etiquetas:
-  1. Variedad de Precio Nominal + Cono Monte Carlo + Fronteras CUSUM a 1 vela + Brecha Precio vs. Spline.
-  2. **Zoom Táctico (`120v + t+60`)** con bandas `P25–P75` y niveles operativos legibles al dólar.
-  3. Velocidad inercial ($\dot{r}$) con cruces por cero ($\dot{r}=0$) fechados.
-  4. Aceleración inercial ($\ddot{r}$) con inflexiones ($\ddot{r}=0$) fechadas.
-  5. Atractor en Espacio de Fase $(V_z, r_{\%})$ con flechas direccionales de sentido de giro (`HORARIO` / `ANTIHORARIO`).
-  6. Tensión CUSUM ($S^+, S^-$) con quiebres escalonados y marcador obligatorio de `Pico Máx` en la ventana.
-- **`lens_<W>/panels/01..06_*.png` (`dpi=200`):** Los 6 paneles individuales en alta resolución para inspección focalizada sin recorte manual.
+## 4. Limpieza Visual y Presentación Dual en Dos Etapas (`static_renderer.py` + `report_builder.py`)
+1. **Gráfico Héroe (`hero.png`) y Dashboards Sin Códigos Crudos (`static_renderer.py`):**
+   - `hero.png` unifica en **1 solo panel** velas OHLC (o línea de cierre), curva y cono `1000v` (o gris discontinua sin cono cuando reprueba), curva `2000v` de fondo, pines puntuales `500v`, **cortes limpios** en cada quiebre CUSUM con pastilla `"Nuevo régimen · YYYY-MM-DD"` (sin escalones verticales artificiales) y **regla lateral derecha** sin solapes.
+   - Se mantienen los 3 dashboards (`2000v`, `1000v`, `500v`) y 18 paneles individuales en disco para auditoría del agente (`xlim` de derivadas truncado a `Hoy`, cero enums crudos), mostrando al usuario final únicamente `hero.png` y el dashboard de `1000v`.
+2. **Flujo en Dos Etapas con Cero Alucinación Numérica (`report_builder.py` + `templates/report.html.j2`):**
+   - **Etapa 1 (`--ticker` / `--csv`):** Persiste `report_bundle.npz` + `narrative_template.json` y genera `report.html` autocontenido offline (`plotly.min.js` embebido, tema oscuro por defecto + interruptor Claro/Oscuro en vivo, 3 pestañas y selector de horizonte `1S / 1M / 3M / t+150 / Vista Héroe`) junto con `analysis.md` en modo cuantitativo puro.
+   - **Etapa 2 (`--render-report <DIR>`):** Fusiona el texto cualitativo de `narrative.json` con el 100% de cifras del motor en `< 0.5 s`, actualizando `report.html`, `analysis.md` y opcionalmente los artefactos listos para incrustar vía `--artifact-dir`.

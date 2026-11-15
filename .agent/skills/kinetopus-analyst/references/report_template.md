@@ -1,55 +1,84 @@
-# Plantilla Estándar de Informe Multi-Lente de Alto Impacto (Hito 2)
+# Esquema `narrative.json` y Estándar Geométrico de Informe (`v0.3.1`)
 
-Usa esta estructura exacta dividida en **dos partes** (ejecutiva intuitiva primero, argumentación técnica profunda después) tanto para el **Artifact** como para `reports/<TICKER>/<TIMESTAMP>/analysis.md`. Escapa siempre el signo de moneda como `\$` fuera de fórmulas matemáticas. Sin avisos legales ni restricciones artificiales de tono por ahora (uso interno).
+En `v0.3.1`, **`KinetopusReportBuilder` ensambla programáticamente tanto `report.html` como `analysis.md`**, inyectando el 100% de precios, distancias a las 3 curvas, ajuste Curva-Precio (`R²`, `MAPE`), rangos `P25–P75`, probabilidades de primer toque (`touch_probability_pct`) y métricas directamente desde `confluence.json` y `lens_<W>/telemetry.json`.
 
----
-
-# PARTE 1 — Ficha Ejecutiva de 1 Minuto (Lectura Rápida y Sin Jerga)
-
-## 1. Titular y Semáforo de Confluencia
-* **Titular en una sola frase directa:** Qué está haciendo el activo y cuál es el mensaje principal hoy.
-* **Bloque de Semáforo (`> [!IMPORTANT]` / `> [!WARNING]` / `> [!CAUTION]`):**
-  * **Confianza Física Global:** `ALTA` / `MEDIA` / `BAJA_CAUTELA` / `NULA_O_DEGRADADA` (recordando el tope en `BAJA_CAUTELA` si la lente de `2000v` no aprueba el sello o es `N/D`).
-  * **Fondo (`2000v`) · Confirmación (`1000v`) · Timing (`500v`):** Estado claro en 1 línea por nivel.
-
-## 2. Las 5 Preguntas Clave (1–2 líneas por respuesta, lenguaje llano para cualquier persona)
-1. **¿Hacia dónde va en el fondo, a medio plazo y a corto plazo?**
-2. **¿Es fiable esta lectura hoy?** *(explicar en lenguaje cotidiano si el activo está respetando su propia inercia o si está movido por noticias externas).*
-3. **¿Qué niveles de precio importan de verdad?** *(pivotes actuales y fronteras alcistas/bajistas donde cambia el escenario).*
-4. **¿Qué rango de precios esperar a 1 semana, 1 mes y 3 meses?** *(usar `t+5`/`t+21`/`t+63` en acciones/ETFs de ~252 sesiones y `t+7`/`t+30`/`t+90` en cripto 24/7, indicando centro y banda razonable `P25–P75`).*
-5. **¿Qué podría romper este escenario?** *(catalizadores próximos y nivel exacto de ruptura).*
-
-## 3. Gráfico Principal de Confluencia Multi-Lente
-* Incrustar `confluence.png` (ruta absoluta del directorio de artefactos en el Artifact; `./confluence.png` en `analysis.md`).
-
-## 4. Tabla Ejecutiva de Niveles Clave y Rangos Esperados
-* Tabla compacta y limpia con: **Precio Actual**, **Invalidación Bajista / Ruptura Alcista**, **Rango 1 Semana**, **Rango 1 Mes** y **Rango 3 Meses**.
-
-## 5. Los 3 Insights de Mayor Impacto
-* Exactamente **3 viñetas cortas y contundentes** con los hallazgos más valiosos del análisis (lo que un stakeholder o trader debe llevarse en la cabeza).
+El agente **nunca transcribe tablas numéricas a mano**: redacta únicamente `<report_dir>/narrative.json` y ejecuta `--render-report <report_dir>`.
 
 ---
 
-# PARTE 2 — Análisis Técnico, Físico y Argumentativo Detallado
+## 1. Esquema Cualitativo `narrative.json` (Etapa 2)
 
-## 6. Jerarquía Multi-Lente (`2000v` → `1000v` → `500v`) y Doble Sello Estricto
-* Tabla comparativa completa de las 3 lentes:
-  * Columnas: `Lente / Rol`, `Rango de Fechas`, `Calibración (k* / tol)`, `Dirección y Cuadrante`, `Brecha Precio vs Spline`, `SINDy R²`, `Ljung-Box (p)`, `Walk-Forward Estricto (HR% y Cortes Efectivos)`, `Veredicto del Sello`.
-* Explicación argumentada de cómo opera la jerarquía fija en este activo concreto (por qué la lente larga dicta o deja indeterminado el fondo sin ser reemplazada por la media, cómo confirma `1000v` y qué matiz táctico aporta `500v`). Mentionar si la descarga escaló automáticamente de `10y` a `max`.
+```json
+{
+  "headline": "Titular ejecutivo geométrico directo en 1 frase clara y accionable en español.",
+  "scenarios_catalysts": {
+    "base": "Qué condición de flujo o volumen mantiene al precio gravitando dentro del corredor probable P25–P75 hacia t+150.",
+    "bullish": "Qué catalizador impulsaría una expansión sostenida sobre el cuartil P75 hacia la cola alcista P90–P95.",
+    "bearish": "Qué evento adverso perforaría el soporte P25 empujando hacia la banda inferior P5–P10."
+  },
+  "top_insights": [
+    {
+      "title": "Idea clave 1 (Geometría y distancia a las 3 curvas)",
+      "body": "Lectura directa de la posición del precio respecto a 2000v (Cian), 1000v (Ámbar) y 500v (Violeta)."
+    },
+    {
+      "title": "Idea clave 2 (Confluencia t+150 y cuartiles P25–P75)",
+      "body": "Lectura sobre la convergencia o divergencia entre las 3 proyecciones simultáneas a t+150."
+    },
+    {
+      "title": "Idea clave 3 (Consenso y riesgo estructural)",
+      "body": "Lectura frente al consenso externo citado y los catalizadores históricos."
+    }
+  ],
+  "web_consensus": {
+    "convergence_grade": "CONVERGENTE | DIVERGENTE | MIXTA",
+    "summary": "Síntesis clara comparando la geometría física de KineTopus frente al consenso actual.",
+    "sources": [
+      {
+        "source_name": "Casa de análisis o medio financiero",
+        "date": "YYYY-MM-DD",
+        "stance": "Tesis resumida y niveles vigilados por el consenso",
+        "url": "https://..."
+      }
+    ]
+  },
+  "visual_discrepancies": "Confirmación de paridad visual/JSON tras auditar hero.png y los 3 dashboards (1000v Ámbar, 2000v Cian, 500v Violeta), declarando cualquier matiz visual relevante.",
+  "sindy_translation": "Traducción a lenguaje llano de mercado (empuje, fricción elástica, absorción de volumen) de las EDOs acopladas de 1000v.",
+  "cusum_catalysts": [
+    {
+      "date": "YYYY-MM-DD",
+      "event": "Catalizador histórico real detrás del quiebre de régimen o pico de tensión CUSUM (Laboratorio 2.5)."
+    }
+  ],
+  "reading_limits": [
+    "Las proyecciones t+150 extrapolan la deriva determinista (EDO SINDy o amortiguamiento inercial geométrico) junto con la dispersión empírica de residuos EWMA.",
+    "Walk-Forward OOS desactivado por defecto en v0.3.1 (prioridad geométrica; use --audit-oos para auditoría histórica); los choques exógenos reajustan la curvatura mediante detección CUSUM."
+  ]
+}
+```
 
-## 7. Auditoría Visual Escalonada y Cruce "Lo que veo vs. Lo que dice el JSON"
-* Mostrar los dashboards completos de 6 paneles de las lentes disponibles (en el Artifact usar un bloque ````carousel` con `<!-- slide -->` para navegar cómodamente entre `2000v`, `1000v` y `500v`; en `analysis.md` enlazar/incrustar `./lens_2000/dashboard.png`, `./lens_1000/dashboard.png`, `./lens_500/dashboard.png`). Indicar si fue necesario abrir algún panel individual de alta resolución (`panels/01..06.png`).
-* **Tabla/Bloque Obligatorio — Cruce Visual vs. Telemetría JSON:**
-  * Contrastar panel por panel (`Confluencia`, `Zoom Táctico 120v`, `Derivadas dr/dt y d²r/dt²`, `Atractor con flechas`, `Tensión y Pico Máximo CUSUM`) lo que muestra la geometría visual frente a las cifras del JSON, **declarando explícitamente cualquier discrepancia o matiz visual** (ej. caída reciente de velas crudas bajo un spline secular alcista, compresión del cono, cuasi-rupturas CUSUM previas).
+---
 
-## 8. Física de Caja Blanca, Cinemática y Conos por Escala
-* Ecuaciones diferenciales acopladas ($\mathrm{d}r/\mathrm{d}t$ y $\mathrm{d}V/\mathrm{d}t$) en LaTeX (`$$...$$`) de las lentes relevantes, traduciendo físicamente el signo y magnitud de cada término (deriva basal, amortiguamiento elástico de retorno, empuje o absorción por volumen, autovalores de estabilidad y período intrínseco).
-* Fechas y precios exactos de los giros $\dot{r}=0$ e inflexiones $\ddot{r}=0$, sentido de rotación en el espacio de fase y tabla detallada de hitos del cono Monte Carlo (`P5`, `P25`, `P50`, `P75`, `P95`, $F(t)$ y *Skew*) junto con las fronteras de invalidación CUSUM a 1 vela por lente.
+## 2. Arquitectura de 6 + 6 Bloques Generada por el Motor (`v0.3.1`)
 
-## 9. Forense CUSUM, Catalizadores y Contraste con el Consenso Tradicional (Web Citada)
-* **Forense Histórico y Catalizadores Próximos:** Qué evento real originó los regímenes/picos CUSUM y qué citas macro/corporativas próximas amenazan las bandas de invalidación.
-* **Tabla Comparativa: KineTopus Multi-Lente vs. Consenso de Analistas Tradicionales (Fuentes Web Citadas):**
-  * Comparar niveles de soporte, resistencia/objetivos, sesgo de tendencia (largo vs. corto plazo) y lectura de flujos/volumen frente a analistas y casas de análisis reales consultadas en la web (citando cada fuente con enlace), calificando el **Grado de Convergencia** (`Alta`, `Parcial`, `Divergente`) y explicando por qué coinciden o difieren.
+Tanto `analysis.md` como las 3 pestañas de `report.html` (*Resumen Ejecutivo*, *Escenarios y Curvas*, *Laboratorio Técnico (3 Lentes)*) siguen esta estructura fija:
 
-## 10. Límites de Esta Lectura
-* Cerrar siempre con total transparencia enumerando las limitaciones específicas del diagnóstico actual (ej. resolución temporal de `500v` frente a movimientos de pocas semanas, ausencia de mechas `High`/`Low` y liquidez horizontal del libro de órdenes, peso de factores exógenos fuera de `(r, V)`, número de cortes OOS efectivos, etc.).
+### PARTE 1 — Vista Ejecutiva (Lectura Geométrica Clara, Cero Barreras CUSUM de 1 Vela)
+1. **Titular Ejecutivo Geométrico en 1 Frase:** Directo a la posición frente a las 3 curvas y proyección `t+150`.
+2. **Tarjeta de Régimen y Confianza Geométrica:**
+   * Estado humano de 5 categorías (`Impulso alcista`, `Alcista frenando`, `Lateral / Digestión` [`Lateral en máximos` si `>= 95%` del máximo de ventana], `Corrección bajista`, `Caída frenando / Suelo en formación`) + modificador de posición.
+   * Lectura simultánea de `1000v` (Ámbar), `2000v` (Cian) y `500v` (Violeta) con ajuste Curva-Precio (`R²`, `MAPE`) y proyección `t+150`.
+3. **Gráfico Héroe Interactivo (`hero.png` en MD / Plotly con 100% del historial en `report.html`):**
+   * Vista inicial `500v + t+150` con auto-escalado Y limpio, botones `[120v | 500v | 1000v | 2000v | Todo el historial]`, selector `[Cono: 1000v | 2000v | 500v | Sin cono]`, las 3 curvas y sus 3 proyecciones `t+150` simultáneas, cortes históricos limpios y regla lateral derecha sin líneas horizontales CUSUM de 1 vela.
+4. **Posición frente a las 3 Curvas y 3 Escenarios Geométricos (`P25/P75`):**
+   * Tabla comparativa `2000v · 1000v · 500v` (distancia curva-precio, sesgo `30v`, `R²` curva-precio, `t+150`, cuartiles `P25–P75`) y 3 escenarios (*Base*, *Expansión Alcista*, *Reversión Bajista*) centrados en `P25/P75`.
+5. **Tabla de Niveles y Rangos (`1 semana · 1 mes · 3 meses · t+150` + comparativa `2000v`/`500v`):** Sin filas de invalidación CUSUM de 1 vela.
+6. **Las 3 Ideas Clave (`top_insights`):** Exactamente 3 puntos accionables.
+
+### PARTE 2 — Laboratorio Técnico (3 Lentes)
+1. **Tabla Comparativa de las 3 Lentes:** Curva-Precio `R²`, SINDy `R²`, `t+150`, auditoría OOS (cuando `--audit-oos`), cobertura del cono y lectura.
+2. **Contraste con el Consenso de Analistas (Web Citada):** Grado de convergencia, síntesis y tabla con enlaces verificables.
+3. **Selector de los 3 Dashboards Técnicos (`1000v Ámbar` · `2000v Cian` · `500v Violeta`) y Paridad Visual/JSON.**
+4. **Física de Caja Blanca (EDOs SINDy de `1000v`):** Ecuaciones acopladas + traducción física a lenguaje de mercado.
+5. **Forense Histórico CUSUM y Catalizadores:** Registro histórico de rupturas de curva y eventos reales asociados.
+6. **Límites de Esta Lectura:** Extrapolación geométrica, activación eventual de amortiguamiento inercial, edad del régimen y opcionalidad `--audit-oos`.

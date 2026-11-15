@@ -4,14 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kinetopus-pro"
-version = "0.2.0"
-description = "KineTopus-Pro: Hierarchical Multi-Lens Quantitative Regime Radar, Strict Reliability Seals, Multi-Panel Renderer & Agentic Analyst Suite"
+version = "0.3.1"
+description = "KineTopus-Pro: Pure Geometric Multi-Lens Regime Radar, Simultaneous 3-Lens t+150 Projections, Calibrated Cones & Interactive HTML/Markdown Analyst Suite"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary - All Rights Reserved" }
 dependencies = [
     "kinetopus-engine>=2.0.0",
     "matplotlib>=3.7.0",
+    "plotly>=5.18.0",
+    "Jinja2>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -23,3 +25,6 @@ kinetopus-analyze = "kinetopus_pro.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["kinetopus_pro", "kinetopus_pro.*"]
+
+[tool.setuptools.package-data]
+kinetopus_pro = ["templates/*.j2"]

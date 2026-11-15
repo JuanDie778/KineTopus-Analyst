@@ -12,21 +12,29 @@
 
 ## Hito 2: Motor Multi-Lente Jerárquico, Refuerzos Visuales y Reporte en 2 Partes
 **Estado:** ✅ COMPLETADO (`v0.2.0`)
-- **Motor Multi-Lente (`2000v / 1000v / 500v`):** Descarga única inteligente (`10y` con respaldo automático a `max` cuando `10y < 2,690` velas para activos bursátiles de ~252 sesiones/año), calibración `CUSUMAutoTuner` independiente por escala en paralelo (`ProcessPoolExecutor`), degradación limpia `"N/D"` en activos jóvenes y **Jerarquía Fija sin promociones** (`2000v` = Tendencia de Fondo, `1000v` = Confirmación de Medio Plazo, `500v` = Timing Táctico).
-- **Doble Sello Estricto (`v2.2`):** Walk-Forward OOS de **ventana completa estricta (`W` velas exactas por corte, cero truncamiento)**, exigencia de mínimo `5` cortes efectivos (`INSUFICIENTE` en caso contrario), pureza mínima `SINDy R² >= 0.35`, FFT calculada en el mismo proceso y variedad de precio re-anclada por mínimos cuadrados.
-- **Refuerzos Visuales A–E y Lectura Escalonada:** Lienzo maestro `confluence.png` (3 splines $C^2$ superpuestos + zoom `220v` + 3 velocidades $\dot{r}$ superpuestas), dashboard de **6 paneles** por lente incorporando **Zoom Táctico (`120v + t+60`)**, etiquetas fechadas de cruces $\dot{r}=0$ / $\ddot{r}=0$, fronteras CUSUM a 1 vela, brecha Precio vs. Spline, pico máximo CUSUM y flechas orbitales en espacio de fase, más paneles individuales `dpi=200` en `lens_<W>/panels/`.
-- **Storytelling Ejecutivo en 2 Partes:** Ficha Ejecutiva de 1 Minuto (cero jerga matemática, 5 preguntas clave, `confluence.png`, niveles y 3 insights de alto impacto) + Análisis Técnico/Físico Detallado (tabla jerárquica de sellos, auditoría `"Lo que veo vs. lo que dice el JSON"`, EDOs SINDy, forense CUSUM, contraste exclusivo con consenso web citado y sección obligatoria `"Límites de esta lectura"`). Validado empíricamente sobre `BTC-USD` y `SPY`.
+- **Motor Multi-Lente (`2000v / 1000v / 500v`):** Descarga única inteligente (`10y` con respaldo automático a `max`), calibración `CUSUMAutoTuner` independiente por escala en paralelo (`ProcessPoolExecutor`), degradación limpia `"N/D"` y Jerarquía Fija inicial.
+- **Doble Sello Estricto (`v2.2`):** Walk-Forward OOS de ventana completa estricta (`W` velas exactas por corte), mínimo `5` cortes efectivos, pureza mínima `SINDy R² >= 0.35` y variedad re-anclada por mínimos cuadrados.
+- **Dashboards de 6 Paneles y Storytelling en 2 Partes:** Zoom táctico, cruces fechados, fronteras CUSUM a 1 vela, pico máximo CUSUM y contraste con consenso web citado.
+
+---
+
+## Hito 2.5 / v0.3.0: Estándar Definitivo de Análisis, Cono Calibrado y `report.html` Interactivo
+**Estado:** ✅ COMPLETADO (`v0.3.0`)
+- **Rama 1 — Precisión del Cono y Régimen:** Cono Monte Carlo de integración simple en log-precio con volatilidad EWMA (`span=30`, $N=2,000$), métrica no bloqueante de cobertura empírica OOS (`cone_calibration`), `Autopilot 2D` alineado a `R² >= 0.35`, nueva jerarquía centrada en **`1000v` como Lente Principal Predictiva** (`2000v` Contexto de Fondo, `500v` Sensor de Alerta sin rangos), regla estricta `"Sin escenario predictivo validado hoy"` si falla `1000v`, y taxonomía humana de 5 estados (`Lateral en máximos`, `sobreextendido`, etc.).
+- **Rama 2 — Limpieza Visual y Gráfico Héroe:** `hero.png` de 1 solo panel con velas OHLC, cortes limpios en quiebres CUSUM (`"Nuevo régimen · YYYY-MM-DD"`), regla derecha de niveles sin solapes, omisión de conos reprobados, 100% español humano sin enums crudos y exposición al cliente enfocada en `hero.png` + dashboard `1000v` (conservando las 3 lentes en disco para el agente).
+- **Rama 3 — Narrativa de Escenarios Operativos:** 3 escenarios calculados por el motor (*Base*, *Alcista*, *Bajista*) con probabilidad de primer toque antes de `t+150` y estructura fija de `6 + 6` bloques ejecutivos/técnicos.
+- **Rama 4 — Presentación Dual en Dos Etapas (`report.html` + `analysis.md`):** Entregable interactivo offline autocontenido (`plotly.min.js` + Jinja2, tema Oscuro/Claro en vivo, 3 pestañas, selector `1S / 1M / 3M / t+150 / Vista Héroe`) y flujo `--render-report` donde el motor inyecta el 100% de las cifras y `narrative.json` aporta el análisis cualitativo. Validado de extremo a extremo con `BTC-USD` y `SPY`.
 
 ---
 
 ## Hito 3: Escáner Multi-Activo de Regímenes Coherentes
 **Estado:** 📋 PLANIFICADO
-- Ejecutar barridos en lote sobre listas de seguimiento (Acciones, ETFs, Índices, FX, Cripto) filtrando y clasificando activos según alineación Multi-Lente (`ALINEACION_ALCISTA_PLENA` / `ALINEACION_BAJISTA_PLENA`), aprobación del Doble Sello Estricto (`OOS Hit Ratio >= 55–60%` en `>= 5` cortes completos, `SINDy R² >= 0.50`) y estado `CUSUM ESTABLE` o proximidad a ruptura.
+- Ejecutar barridos en lote sobre listas de seguimiento (Acciones, ETFs, Índices, FX, Cripto) filtrando y clasificando activos según validación de la Lente Principal (`1000v`), taxonomía humana de 5 estados, cobertura empírica del cono y cercanía a fronteras CUSUM o pines de alerta `500v`.
 
 ---
 
 ## Hito 4: Empaquetado de Servicio, API e Indicador Portable
 **Estado:** 📋 IDEACIÓN
-- **Consumo Directo (Analistas / Público General):** Reportes ejecutivos intuitivos en 2 partes, visualizaciones claras y flujo *plug-and-play* de baja fricción (CLI, Skill/MCP o interfaz web ligera).
+- **Consumo Directo (Analistas / Público General):** Reportes interactivos `report.html` autocontenidos y flujo *plug-and-play* de baja fricción (CLI, Skill/MCP o interfaz web ligera).
 - **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Endpoints/feeds JSON portables (`confluence.json`), indicador estructurado de régimen/invalidación CUSUM multi-escala y widgets embebibles ligeros.
-- **Alertas Activas:** Servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$), cruces de velocidad ($\dot{r}=0$) en la lente de Timing (`500v`) y transiciones de coherencia OOS.
+- **Alertas Activas:** Servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$), pines tácticos del Sensor de Alerta (`500v`) y transiciones de validación OOS en `1000v`.

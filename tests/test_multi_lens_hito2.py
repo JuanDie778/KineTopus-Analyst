@@ -67,13 +67,14 @@ def test_fast_cusum_autotune_exact_parity_with_upstream():
 
 
 def test_strict_walk_forward_full_window_and_insuficiente_seal():
-    """Verifica que nunca se trunca `p_train` y que <5 cortes efectivos producen sello `INSUFICIENTE`."""
+    """Verifica con `audit_oos=True` que no se trunca `p_train` y `<5` cortes marcan `INSUFICIENTE`."""
     # Caso A: Margen suficiente para >= 5 cortes de ventana completa (W=400, n=620, eval_h=30)
     df_ok = _build_synthetic_df(620, seed=101)
     cfg_ok = KinetopusAnalysisConfig(
         ticker="WF-FULL",
         context_window=400,
         horizon_steps=30,
+        audit_oos=True,
         wf_cuts=8,
         min_wf_effective_cuts=5,
         strict_wf_window=True,
@@ -94,6 +95,7 @@ def test_strict_walk_forward_full_window_and_insuficiente_seal():
         ticker="WF-INSUF",
         context_window=400,
         horizon_steps=30,
+        audit_oos=True,
         wf_cuts=8,
         min_wf_effective_cuts=5,
         strict_wf_window=True,
@@ -112,15 +114,15 @@ def test_strict_walk_forward_full_window_and_insuficiente_seal():
     assert seal_short["seal_grade"] == "INSUFICIENTE"
 
 
-def test_nd_graceful_handling_and_no_hierarchy_promotion():
-    """Si un activo solo tiene 1,250 velas, 2000v es `N/D`, 1000v NO la reemplaza y la confianza se topa."""
+def test_nd_graceful_handling_and_geometric_anchor():
+    """Verifica manejo limpio de `N/D` sin bloqueos y respaldo geométrico 500v en activos jóvenes."""
+    # Caso 1: 1,250 velas -> 2000v es `N/D`, 1000v actúa como eje principal sin promoverse a 2000v
     df_mid = _build_synthetic_df(1250, seed=303)
     m_cfg = MultiLensConfig(
         ticker="ND-ASSET",
         lenses=(2000, 1000, 500),
         horizon_steps=30,
-        wf_cuts=6,
-        min_wf_effective_cuts=5,
+        audit_oos=False,
         auto_tune=False,
         auto_rescue=False,
         cusum_k=1.2,
@@ -135,77 +137,131 @@ def test_nd_graceful_handling_and_no_hierarchy_promotion():
     assert lenses_sum["2000"]["available"] is False
     assert lenses_sum["1000"]["status"] == "OK"
     assert lenses_sum["500"]["status"] == "OK"
-
     assert hier["background_trend_2000v"].startswith("N/D")
-    assert hier["alignment_pattern"] == "FONDO_INDETERMINADO_POR_SELLO_LARGO"
-    assert hier["global_physical_confidence"] in {"BAJA_CAUTELA", "NULA_O_DEGRADADA"}
+    assert hier["context_tide_2000v"].startswith("No disponible")
+    assert hier["anchor_window_candles"] == 1000
+    assert hier["predictive_scenario_validated"] is True
+    assert "Sin escenario predictivo validado" not in hier["executive_banner"]
+
+    # Caso 2: 750 velas -> 2000v y 1000v son `N/D`, 500v entrega geometría t+30 sin bloqueo
+    df_young = _build_synthetic_df(750, seed=304)
+    young_res = KinetopusMultiLensRunner(m_cfg).run(df_override=df_young)
+    hier_young = young_res.confluence["hierarchy_verdict"]
+    sum_young = young_res.confluence["lenses_summary"]
+
+    assert sum_young["2000"]["status"] == "N/D"
+    assert sum_young["1000"]["status"] == "N/D"
+    assert sum_young["500"]["status"] == "OK"
+    assert hier_young["predictive_scenario_validated"] is True
+    assert hier_young["anchor_window_candles"] == 500
+    assert "Sin escenario predictivo validado" not in hier_young["executive_banner"]
+    assert len(hier_young["executive_ranges"]) >= 2
+    assert hier_young["executive_ranges"][-1]["horizon_step"] == "t+30"
 
 
-def test_fixed_hierarchy_2000v_exogenous_caps_global_confidence():
-    """Aunque 1000v y 500v tengan APROBADO_PLENO, si 2000v reprueba como exógena el tope es BAJA_CAUTELA."""
-    mock_failed_macro = [
+def test_geometric_hierarchy_no_oos_veto_and_3lens_t150():
+    """Verifica v0.3.1: cero bloqueos por SINDy R² u OOS, 3 lentes con t+150 y confianza geométrica."""
+    def _chk_t150(base_p: float, end_p: float):
+        return [
+            {
+                "step": 150,
+                "deterministic_price": end_p,
+                "deterministic_return_pct": round(((end_p / base_p) - 1.0) * 100.0, 2),
+                "mc_p5": end_p * 0.85,
+                "mc_p25": end_p * 0.93,
+                "mc_p50": end_p,
+                "mc_p75": end_p * 1.07,
+                "mc_p95": end_p * 1.15,
+            }
+        ]
+
+    # Subcaso A: SINDy R² bajo (0.18) y sin sello OOS, pero Curva-Precio R² alto (0.93) y 3 lentes alineadas
+    mock_geom_aligned = [
         {
             "window_candles": 2000,
+            "color_name": "Cian",
+            "role_code": "CONTEXTO_FONDO",
+            "role_label": "Contexto estructural (2000v)",
             "available": True,
-            "seal_passed": False,
-            "seal_grade": "REPROBADO_EXOGENO",
-            "oos_physics_class": "EXOGENO_FUNDAMENTALISTA",
-            "oos_consensus_hr_pct": 44.0,
-            "oos_effective_cuts": 10,
-            "sindy_r2_score": 0.72,
+            "seal_passed": True,
+            "seal_grade": "GEOMETRICO_ACTIVO",
+            "oos_consensus_hr_pct": None,
+            "sindy_r2_score": 0.14,
+            "curve_price_r2": 0.91,
+            "curve_price_mape_pct": 3.4,
+            "curve_price_quality": "Alto",
+            "curve_price_fit": {"window_price_r2": 0.91, "window_price_mape_pct": 3.4, "fit_label": "Alto"},
             "raw_direction": "ALCISTA",
-            "quadrant": "Q1_IMPULSO_ALCISTA_ACELERANDO",
-            "lens_confidence": "BAJA_CAUTELA",
+            "cusum_tension_ratio": 0.25,
+            "human_regime": {"state_code": "IMPULSO_ALCISTA", "state_label": "Impulso alcista", "full_label": "Impulso alcista · cerca de su curva"},
+            "horizon_checkpoints": _chk_t150(100.0, 114.0),
+            "t150_summary": {"center_price": 114.0, "center_return_pct": 14.0, "p25_price": 106.0, "p75_price": 122.0, "p5_price": 96.0, "p95_price": 131.0},
+            "scenarios": {"available": True, "validated": True, "horizon_step": "t+150"},
         },
         {
             "window_candles": 1000,
+            "color_name": "Ámbar",
+            "role_code": "PRINCIPAL_PREDICTIVA",
+            "role_label": "Eje principal (1000v)",
             "available": True,
             "seal_passed": True,
-            "seal_grade": "APROBADO_PLENO",
-            "oos_physics_class": "COHERENTE_INERCIAL",
-            "oos_consensus_hr_pct": 65.0,
-            "oos_effective_cuts": 10,
-            "sindy_r2_score": 0.85,
+            "seal_grade": "GEOMETRICO_ACTIVO",
+            "oos_consensus_hr_pct": None,
+            "sindy_r2_score": 0.18,
+            "curve_price_r2": 0.93,
+            "curve_price_mape_pct": 2.1,
+            "curve_price_quality": "Alto",
+            "curve_price_fit": {"window_price_r2": 0.93, "window_price_mape_pct": 2.1, "fit_label": "Alto"},
             "raw_direction": "ALCISTA",
-            "quadrant": "Q1_IMPULSO_ALCISTA_ACELERANDO",
-            "lens_confidence": "ALTA",
+            "cusum_tension_ratio": 0.20,
+            "human_regime": {"state_code": "IMPULSO_ALCISTA", "state_label": "Impulso alcista", "full_label": "Impulso alcista · cerca de su curva"},
+            "horizon_checkpoints": _chk_t150(100.0, 118.0),
+            "t150_summary": {"center_price": 118.0, "center_return_pct": 18.0, "p25_price": 109.0, "p75_price": 127.0, "p5_price": 100.0, "p95_price": 135.0},
+            "scenarios": {"available": True, "validated": True, "horizon_step": "t+150"},
         },
         {
             "window_candles": 500,
+            "color_name": "Violeta",
+            "role_code": "SENSOR_ALERTA",
+            "role_label": "Pulso táctico (500v)",
             "available": True,
             "seal_passed": True,
-            "seal_grade": "APROBADO_PLENO",
-            "oos_physics_class": "COHERENTE_INERCIAL",
-            "oos_consensus_hr_pct": 70.0,
-            "oos_effective_cuts": 10,
-            "sindy_r2_score": 0.88,
+            "seal_grade": "GEOMETRICO_ACTIVO",
+            "oos_consensus_hr_pct": None,
+            "sindy_r2_score": 0.12,
+            "curve_price_r2": 0.95,
+            "curve_price_mape_pct": 1.6,
+            "curve_price_quality": "Alto",
+            "curve_price_fit": {"window_price_r2": 0.95, "window_price_mape_pct": 1.6, "fit_label": "Alto"},
             "raw_direction": "ALCISTA",
-            "quadrant": "Q1_IMPULSO_ALCISTA_ACELERANDO",
-            "lens_confidence": "ALTA",
+            "cusum_tension_ratio": 0.18,
+            "human_regime": {"state_code": "IMPULSO_ALCISTA", "state_label": "Impulso alcista", "full_label": "Impulso alcista · cerca de su curva"},
+            "horizon_checkpoints": _chk_t150(100.0, 121.0),
+            "t150_summary": {"center_price": 121.0, "center_return_pct": 21.0, "p25_price": 112.0, "p75_price": 130.0, "p5_price": 102.0, "p95_price": 138.0},
+            "scenarios": {"available": True, "validated": True, "horizon_step": "t+150"},
         },
     ]
-    verdict_capped = KinetopusMultiLensRunner._synthesize_fixed_hierarchy(mock_failed_macro)
-    assert verdict_capped["background_trend_2000v"] == "INDETERMINADA (exógena)"
-    assert verdict_capped["medium_confirmation_1000v"].startswith("ACTIVA_AISLADA_ALCISTA")
-    assert verdict_capped["alignment_pattern"] == "FONDO_INDETERMINADO_POR_SELLO_LARGO"
-    assert verdict_capped["global_physical_confidence"] == "BAJA_CAUTELA"
+    verdict_ok = KinetopusMultiLensRunner._synthesize_fixed_hierarchy(mock_geom_aligned)
+    assert verdict_ok["predictive_scenario_validated"] is True
+    assert verdict_ok["unvalidated_reason"] is None
+    assert "Sin escenario" not in verdict_ok["executive_banner"]
+    assert verdict_ok["global_physical_confidence"] == "ALTA"
+    assert len(verdict_ok["curves_comparison"]) == 3
+    assert set(verdict_ok["ranges_by_lens"].keys()) == {"2000", "1000", "500"}
 
-    # Camino feliz: las 3 lentes aprueban en pleno en la misma dirección
-    mock_all_ok = [dict(item) for item in mock_failed_macro]
-    mock_all_ok[0].update(
-        {
-            "seal_passed": True,
-            "seal_grade": "APROBADO_PLENO",
-            "oos_physics_class": "COHERENTE_INERCIAL",
-            "oos_consensus_hr_pct": 62.0,
-            "lens_confidence": "ALTA",
-        }
+    # Subcaso B: Desalineación entre 2000v y 1000v + ajuste curva-precio débil -> confianza BAJA sin bloquear proyección
+    mock_divergent = [dict(item) for item in mock_geom_aligned]
+    mock_divergent[0] = dict(mock_divergent[0], raw_direction="BAJISTA")
+    mock_divergent[1] = dict(
+        mock_divergent[1],
+        curve_price_r2=0.42,
+        curve_price_mape_pct=9.5,
+        curve_price_fit={"window_price_r2": 0.42, "window_price_mape_pct": 9.5, "fit_label": "Moderado"},
+        cusum_tension_ratio=0.88,
     )
-    verdict_full = KinetopusMultiLensRunner._synthesize_fixed_hierarchy(mock_all_ok)
-    assert verdict_full["background_trend_2000v"] == "ALCISTA (APROBADO_PLENO)"
-    assert verdict_full["medium_confirmation_1000v"] == "CONFIRMADA_ALCISTA"
-    assert verdict_full["alignment_pattern"] == "ALINEACION_JERARQUICA_PLENA_ALCISTA"
-    assert verdict_full["global_physical_confidence"] == "ALTA"
+    verdict_div = KinetopusMultiLensRunner._synthesize_fixed_hierarchy(mock_divergent)
+    assert verdict_div["predictive_scenario_validated"] is True
+    assert verdict_div["global_physical_confidence"] == "BAJA"
 
 
 def test_smart_download_10y_to_max_fallback(monkeypatch: pytest.MonkeyPatch):

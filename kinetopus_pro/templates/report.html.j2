@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ meta.ticker }} · Informe KineTopus ({{ meta.last_date }})</title>
+  <style>
+    :root,
+    [data-theme="dark"] {
+      --bg-page: #070b12;
+      --bg-card: #0f172a;
+      --bg-elevated: #131e33;
+      --bg-subtle: #0b1120;
+      --border: #1e293b;
+      --border-strong: #334155;
+      --text-main: #f8fafc;
+      --text-sub: #cbd5e1;
+      --text-muted: #94a3b8;
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --blue: #38bdf8;
+      --blue-soft: rgba(56, 189, 248, 0.13);
+      --emerald: #10b981;
+      --emerald-soft: rgba(16, 185, 129, 0.14);
+      --rose: #f43f5e;
+      --rose-soft: rgba(244, 63, 94, 0.14);
+      --violet: #c084fc;
+      --violet-soft: rgba(192, 132, 252, 0.14);
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+    }
+
+    [data-theme="light"] {
+      --bg-page: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-elevated: #f8fafc;
+      --bg-subtle: #f8fafc;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-sub: #334155;
+      --text-muted: #64748b;
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.11);
+      --blue: #0284c7;
+      --blue-soft: rgba(2, 132, 199, 0.10);
+      --emerald: #059669;
+      --emerald-soft: rgba(5, 150, 105, 0.11);
+      --rose: #e11d48;
+      --rose-soft: rgba(225, 29, 72, 0.10);
+      --violet: #7c3aed;
+      --violet-soft: rgba(124, 58, 237, 0.10);
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-page);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 24px 56px;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand-pill {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--amber);
+      background: var(--amber-soft);
+      border: 1px solid var(--amber);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .asset-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .price-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .price-now {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .meta-tag {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .theme-btn {
+      cursor: pointer;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .theme-btn:hover {
+      border-color: var(--amber);
+    }
+
+    /* Headline Banner */
+    .headline-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--amber);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .headline-box.unvalidated {
+      border-left-color: var(--rose);
+    }
+
+    .headline-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .headline-text {
+      font-size: 17.5px;
+      font-weight: 650;
+      color: var(--text-main);
+      margin: 0;
+    }
+
+    /* Navigation Tabs */
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 22px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      border-bottom: 2.5px solid transparent;
+      color: var(--text-muted);
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 650;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--amber);
+      border-bottom-color: var(--amber);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Regime Card Grid */
+    .regime-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 960px) {
+      .regime-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .regime-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card.primary-slot {
+      border-color: var(--amber);
+    }
+
+    .stat-card.unvalidated-slot {
+      border-color: var(--rose);
+    }
+
+    .stat-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .stat-sub {
+      font-size: 12.5px;
+      color: var(--text-sub);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-alta {
+      background: var(--emerald-soft);
+      color: var(--emerald);
+      border: 1px solid var(--emerald);
+    }
+
+    .badge-media {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border: 1px solid var(--amber);
+    }
+
+    .badge-baja {
+      background: var(--rose-soft);
+      color: var(--rose);
+      border: 1px solid var(--rose);
+    }
+
+    /* Interactive Chart Card */
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px 14px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .chart-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .chart-heading {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .horizon-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .hz-btn {
+      cursor: pointer;
+      background: var(--bg-elevated);
+      color: var(--text-sub);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 650;
+      transition: all 0.14s ease;
+    }
+
+    .hz-btn:hover {
+      color: var(--text-main);
+      border-color: var(--amber);
+    }
+
+    .hz-btn.active {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .hz-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .toolbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-right: 2px;
+    }
+
+    .cone-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    .dash-pane {
+      display: none;
+    }
+
+    .dash-pane.active {
+      display: block;
+    }
+
+    .hz-readout {
+      font-size: 12.5px;
+      color: var(--text-sub);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #hero-plot {
+      width: 100%;
+      height: 540px;
+    }
+
+    /* Insights & Scenarios Cards */
+    .cards-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .cards-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 750;
+      margin: 0 0 14px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scenario-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 3.5px solid var(--amber);
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .scenario-card.bull {
+      border-top-color: var(--emerald);
+    }
+
+    .scenario-card.bear {
+      border-top-color: var(--rose);
+    }
+
+    .sc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .sc-name {
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    .sc-prob {
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sc-kv {
+      font-size: 13px;
+      margin: 6px 0;
+      color: var(--text-sub);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sc-kv strong {
+      color: var(--text-main);
+    }
+
+    .sc-cat {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-strong);
+      font-size: 12.8px;
+      color: var(--text-sub);
+    }
+
+    .insight-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .insight-num {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--amber);
+      margin-bottom: 4px;
+    }
+
+    .insight-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--text-main);
+    }
+
+    .insight-body {
+      font-size: 13.3px;
+      color: var(--text-sub);
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th {
+      text-align: left;
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-sub);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr.highlight-row td {
+      background: var(--amber-soft);
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12.4px;
+    }
+
+    .notice-unvalidated {
+      background: var(--rose-soft);
+      border: 1px solid var(--rose);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      color: var(--text-main);
+    }
+
+    .dashboard-img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+      margin-top: 8px;
+    }
+
+    .clean-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-sub);
+      font-size: 13.5px;
+    }
+
+    .clean-list li {
+      margin-bottom: 6px;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .footer-note {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- Top Header -->
+    <header class="topbar">
+      <div class="brand-group">
+        <span class="brand-pill">KineTopus · v0.3.1</span>
+        <h1 class="asset-title">{{ meta.ticker }}</h1>
+        <span class="meta-tag">{{ meta.interval }} · {{ meta.calendar_mode }}</span>
+      </div>
+      <div class="price-strip">
+        <span class="price-now">{{ meta.last_close_fmt }}</span>
+        <span class="meta-tag">Últ. vela: {{ meta.last_date }}</span>
+        <button id="theme-toggle" class="theme-btn" type="button" onclick="toggleTheme()">
+          Modo Claro
+        </button>
+      </div>
+    </header>
+
+    <!-- Executive Headline -->
+    <section class="headline-box">
+      <div class="headline-kicker">
+        Lectura Ejecutiva Geométrica {% if narrative_stage == 'cuantitativo' %}· Resumen Automático del Motor{% endif %}
+      </div>
+      <p class="headline-text">{{ narrative.headline }}</p>
+    </section>
+
+    <!-- Tabs Navigation -->
+    <nav class="tabs-nav" role="tablist">
+      <button class="tab-btn active" data-tab="tab-resumen" onclick="switchTab('tab-resumen', this)">
+        1. Resumen Ejecutivo
+      </button>
+      <button class="tab-btn" data-tab="tab-escenarios" onclick="switchTab('tab-escenarios', this)">
+        2. Escenarios y Curvas
+      </button>
+      <button class="tab-btn" data-tab="tab-laboratorio" onclick="switchTab('tab-laboratorio', this)">
+        3. Laboratorio Técnico (3 Lentes)
+      </button>
+    </nav>
+
+    <!-- ================= TAB 1: RESUMEN EJECUTIVO ================= -->
+    <div id="tab-resumen" class="tab-panel active">
+      <div class="regime-grid">
+        <div class="stat-card primary-slot">
+          <div class="stat-label">Lente Principal (1000v · Ámbar)</div>
+          <div class="stat-value">{{ hierarchy.executive_banner }}</div>
+          <div class="stat-sub">{{ regime_card.primary_sub }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Contexto de Fondo (2000v · Cian)</div>
+          <div class="stat-value">{{ regime_card.context_title }}</div>
+          <div class="stat-sub">{{ regime_card.context_sub }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Sensor Táctico (500v · Violeta)</div>
+          <div class="stat-value">{{ regime_card.alert_title }}</div>
+          <div class="stat-sub">{{ hierarchy.tactical_alert_500v }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Confianza Geométrica</div>
+          <div class="stat-value">
+            <span class="badge badge-{{ hierarchy.global_physical_confidence | lower }}">
+              {{ hierarchy.global_physical_confidence }}
+            </span>
+          </div>
+          <div class="stat-sub">{{ regime_card.confidence_sub }}</div>
+        </div>
+      </div>
+
+      <!-- Interactive Hero Chart -->
+      <div class="chart-card">
+        <div class="chart-toolbar">
+          <div class="chart-heading">
+            Gráfico Héroe Interactivo · Curvas 2000v (Cian), 1000v (Ámbar) y 500v (Violeta) + t+150
+          </div>
+          <div class="toolbar-controls">
+            <div class="ctrl-group" id="hz-buttons">
+              <span class="ctrl-label">Ventana:</span>
+              {% for hz in horizon_buttons %}
+              <button
+                type="button"
+                class="hz-btn {% if hz.default %}active{% endif %}"
+                data-win-key="{{ hz.key }}"
+                onclick="selectWindow('{{ hz.key }}', this)"
+              >
+                {{ hz.label }}
+              </button>
+              {% endfor %}
+            </div>
+            <div class="ctrl-group" id="cone-buttons">
+              <span class="ctrl-label">Cono:</span>
+              {% for cb in cone_buttons %}
+              <button
+                type="button"
+                class="hz-btn {% if cb.default %}active{% endif %}"
+                data-cone-key="{{ cb.key }}"
+                {% if not cb.available %}disabled title="Sin historial suficiente para este cono"{% endif %}
+                onclick="selectCone('{{ cb.key }}', this)"
+              >
+                <span class="cone-dot" style="background: {{ cb.color_dot }};"></span>{{ cb.label }}
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div id="hz-readout" class="hz-readout">{{ default_horizon_readout }}</div>
+        <div id="hero-plot"></div>
+      </div>
+
+      <!-- Top 3 Insights -->
+      <div class="section-title">3 Ideas Clave para la Toma de Decisiones</div>
+      <div class="cards-3">
+        {% for ins in narrative.top_insights %}
+        <div class="insight-card">
+          <div class="insight-num">Clave {{ loop.index }}</div>
+          <h3 class="insight-title">{{ ins.title }}</h3>
+          <p class="insight-body">{{ ins.body }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ================= TAB 2: ESCENARIOS Y CURVAS ================= -->
+    <div id="tab-escenarios" class="tab-panel">
+      <div class="panel-card">
+        <h2 class="section-title">Posición del Precio frente a las 3 Curvas y Proyección t+150</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Lente</th>
+                <th>Rol</th>
+                <th>Curva Hoy</th>
+                <th>Dist. Precio vs. Curva</th>
+                <th>Sesgo 30v</th>
+                <th>Ajuste Curva-Precio (R² / MAPE)</th>
+                <th>Proyección t+150</th>
+                <th>Cuartiles P25–P75 (t+150)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for crow in curves_table %}
+              <tr class="{% if crow.is_primary %}highlight-row{% endif %}">
+                <td><strong>{{ crow.window }} · {{ crow.color_name }}</strong></td>
+                <td>{{ crow.role }}</td>
+                <td>{{ crow.curve_now_fmt }}</td>
+                <td>{{ crow.gap_now_fmt }}</td>
+                <td>{{ crow.gap_30_fmt }}</td>
+                <td>{{ crow.fit_r2_fmt }}</td>
+                <td><strong>{{ crow.t150_center_fmt }}</strong></td>
+                <td>{{ crow.t150_iqr_fmt }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% if scenarios_view.validated %}
+      <div class="section-title">
+        3 Escenarios Geométricos (Cuartiles P25/P75 de 1000v · Probabilidad de Toque antes de {{ scenarios_view.horizon_step }})
+      </div>
+      <div class="cards-3">
+        <!-- Base -->
+        <div class="scenario-card">
+          <div class="sc-header">
+            <span class="sc-name">Escenario Base</span>
+            <span class="sc-prob">Toque centro: {{ scenarios_view.base.prob_fmt }}</span>
+          </div>
+          <div class="sc-kv"><strong>Condición geométrica:</strong> {{ scenarios_view.base.trigger_fmt }}</div>
+          <div class="sc-kv"><strong>Centro {{ scenarios_view.horizon_step }}:</strong> {{ scenarios_view.base.target_fmt }}</div>
+          <div class="sc-kv"><strong>Banda central P25–P75:</strong> {{ scenarios_view.base.band_fmt }}</div>
+          <div class="sc-kv"><strong>Supervivencia en canal P25–P75:</strong> {{ scenarios_view.base.stay_fmt }}</div>
+          <div class="sc-cat"><strong>Lectura / Catalizador:</strong> {{ narrative.scenarios_catalysts.base }}</div>
+        </div>
+        <!-- Bullish -->
+        <div class="scenario-card bull">
+          <div class="sc-header">
+            <span class="sc-name">Expansión Alcista</span>
+            <span class="sc-prob">Prob. toque: {{ scenarios_view.bullish.prob_fmt }}</span>
+          </div>
+          <div class="sc-kv"><strong>Ruptura sobre P75:</strong> {{ scenarios_view.bullish.trigger_fmt }}</div>
+          <div class="sc-kv"><strong>Objetivo alcista:</strong> {{ scenarios_view.bullish.target_fmt }}</div>
+          <div class="sc-cat"><strong>Catalizador requerido:</strong> {{ narrative.scenarios_catalysts.bullish }}</div>
+        </div>
+        <!-- Bearish -->
+        <div class="scenario-card bear">
+          <div class="sc-header">
+            <span class="sc-name">Reversión Bajista</span>
+            <span class="sc-prob">Prob. toque: {{ scenarios_view.bearish.prob_fmt }}</span>
+          </div>
+          <div class="sc-kv"><strong>Ruptura bajo P25:</strong> {{ scenarios_view.bearish.trigger_fmt }}</div>
+          <div class="sc-kv"><strong>Objetivo bajista:</strong> {{ scenarios_view.bearish.target_fmt }}</div>
+          <div class="sc-cat"><strong>Riesgo / Catalizador:</strong> {{ narrative.scenarios_catalysts.bearish }}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="panel-card">
+        <h2 class="section-title">Tabla de Niveles, Proyecciones y Cuartiles P25/P75</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Referencia / Horizonte</th>
+                <th>Nivel Central / Precio</th>
+                <th>Variación vs. Hoy</th>
+                <th>Banda Probable (P25–P75)</th>
+                <th>Banda Extrema (P5–P95)</th>
+                <th>Lectura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in levels_table %}
+              <tr class="{% if row.highlight %}highlight-row{% endif %}">
+                <td><strong>{{ row.label }}</strong></td>
+                <td>{{ row.price_fmt }}</td>
+                <td>{{ row.ret_fmt }}</td>
+                <td>{{ row.iqr_fmt }}</td>
+                <td>{{ row.wide_fmt }}</td>
+                <td>{{ row.note }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= TAB 3: LABORATORIO TÉCNICO ================= -->
+    <div id="tab-laboratorio" class="tab-panel">
+      <!-- 1. Tabla de las 3 lentes -->
+      <div class="panel-card">
+        <h2 class="section-title">1. Diagnóstico Geométrico de las 3 Lentes</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Lente</th>
+                <th>Rol Jerárquico</th>
+                <th>Estado Geométrico</th>
+                <th>Curva-Precio R² (MAPE)</th>
+                <th>SINDy R²</th>
+                <th>Proyección t+150</th>
+                <th>Auditoría OOS</th>
+                <th>Cobertura Cono P25–P75</th>
+                <th>Lectura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lrow in lenses_table %}
+              <tr class="{% if lrow.is_primary %}highlight-row{% endif %}">
+                <td><strong>{{ lrow.window }} ({{ lrow.color_name }})</strong></td>
+                <td>{{ lrow.role }}</td>
+                <td>{{ lrow.human_state }}</td>
+                <td>{{ lrow.fit_r2_fmt }}</td>
+                <td>{{ lrow.r2_fmt }}</td>
+                <td>{{ lrow.t150_fmt }}</td>
+                <td>{{ lrow.oos_fmt }}</td>
+                <td>{{ lrow.cone_cal_fmt }}</td>
+                <td>{{ lrow.seal_fmt }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2. Consenso Web Citado -->
+      <div class="panel-card">
+        <h2 class="section-title">
+          2. Contraste con el Consenso Externo ({{ narrative.web_consensus.convergence_grade }})
+        </h2>
+        <p style="margin-top: 0; color: var(--text-sub);">{{ narrative.web_consensus.summary }}</p>
+        {% if narrative.web_consensus.sources %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fuente</th>
+                <th>Fecha</th>
+                <th>Lectura / Niveles Reportados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for src in narrative.web_consensus.sources %}
+              <tr>
+                <td>
+                  {% if src.url %}
+                  <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer"><strong>{{ src.source_name }}</strong></a>
+                  {% else %}
+                  <strong>{{ src.source_name }}</strong>
+                  {% endif %}
+                </td>
+                <td>{{ src.date }}</td>
+                <td>{{ src.stance }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- 3. Selector de los 3 Dashboards + Paridad Visual -->
+      <div class="panel-card">
+        <div class="chart-toolbar">
+          <h2 class="section-title" style="margin: 0;">3. Paneles Técnicos Completos (1000v · 2000v · 500v)</h2>
+          <div class="ctrl-group" id="dash-buttons">
+            {% for dopt in dashboard_options %}
+            <button
+              type="button"
+              class="hz-btn {% if dopt.default %}active{% endif %}"
+              {% if not dopt.available %}disabled{% endif %}
+              onclick="selectDashboard('{{ dopt.key }}', this)"
+            >
+              <span class="cone-dot" style="background: {{ dopt.color }};"></span>{{ dopt.label }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        <p style="margin-top: 6px; color: var(--text-sub);">
+          <strong>Auditoría visual frente a JSON:</strong> {{ narrative.visual_discrepancies }}
+        </p>
+        {% for dopt in dashboard_options %}
+        {% if dopt.available %}
+        <div id="dash-pane-{{ dopt.key }}" class="dash-pane {% if dopt.default %}active{% endif %}">
+          <img
+            class="dashboard-img"
+            src="data:image/png;base64,{{ dopt.b64 }}"
+            alt="{{ dopt.label }}"
+          />
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- 4. Ecuaciones SINDy 1000v -->
+      <div class="panel-card">
+        <h2 class="section-title">4. Ecuaciones Diferenciales SINDy (1000v) y Mecánica de Mercado</h2>
+        <div class="mono" style="background: var(--bg-subtle); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px;">
+          <div>d{{ sindy_view.var_name }}/dt = {{ sindy_view.eq_r }}</div>
+          <div>dV/dt = {{ sindy_view.eq_v }}</div>
+          <div style="margin-top: 6px; color: var(--text-muted);">
+            Régimen activo: {{ sindy_view.regime_span }} · R² = {{ sindy_view.r2_fmt }} · Estabilidad: {{ sindy_view.stability_human }}
+          </div>
+        </div>
+        <p style="margin: 0; color: var(--text-sub);">{{ narrative.sindy_translation }}</p>
+      </div>
+
+      <!-- 5. Forense CUSUM Histórico -->
+      <div class="panel-card">
+        <h2 class="section-title">5. Forense Histórico de Quiebres CUSUM y Catalizadores</h2>
+        <div class="table-wrap" style="margin-bottom: 12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Evento Histórico del Motor</th>
+                <th>Fecha Exacta</th>
+                <th>Precio</th>
+                <th>Magnitud / Tensión</th>
+                <th>Catalizador Histórico Identificado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c_ev in cusum_events_view %}
+              <tr>
+                <td><strong>{{ c_ev.kind }}</strong></td>
+                <td>{{ c_ev.date }}</td>
+                <td>{{ c_ev.price_fmt }}</td>
+                <td>{{ c_ev.metric_fmt }}</td>
+                <td>{{ c_ev.catalyst }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. Límites -->
+      <div class="panel-card">
+        <h2 class="section-title">6. Límites de esta Lectura</h2>
+        <ul class="clean-list">
+          {% for lim in narrative.reading_limits %}
+          <li>{{ lim }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer-note">
+      <span>Motor: {{ meta.engine }} · Cifras inyectadas programáticamente sin edición manual</span>
+      <span>Generado: {{ meta.generated_at_utc }}</span>
+    </footer>
+  </div>
+
+  <script>{{ plotly_js | safe }}</script>
+  <script>
+    const HERO_SPEC = {{ hero_plotly_json | safe }};
+    let activeWindowKey = (HERO_SPEC.nav && HERO_SPEC.nav.default_window) || "500";
+    let activeConeKey = (HERO_SPEC.nav && HERO_SPEC.nav.default_cone) || "1000";
+    let isProgrammaticRelayout = false;
+
+    function getPlotThemeLayout(theme) {
+      const dark = theme === "dark";
+      return {
+        paper_bgcolor: dark ? "#0f172a" : "#ffffff",
+        plot_bgcolor: dark ? "#0f172a" : "#ffffff",
+        "font.color": dark ? "#cbd5e1" : "#334155",
+        "xaxis.gridcolor": dark ? "#1e293b" : "#e2e8f0",
+        "yaxis.gridcolor": dark ? "#1e293b" : "#e2e8f0",
+        "xaxis.linecolor": dark ? "#334155" : "#cbd5e1",
+        "yaxis.linecolor": dark ? "#334155" : "#cbd5e1",
+        "legend.bgcolor": dark ? "rgba(9,13,22,0.82)" : "rgba(255,255,255,0.88)",
+        "legend.bordercolor": dark ? "#334155" : "#cbd5e1"
+      };
+    }
+
+    function computeXTicks(x0, x1) {
+      const nav = HERO_SPEC.nav || {};
+      const dates = nav.dates_hist || [];
+      const nHist = nav.n_hist || dates.length;
+      const idxToday = nav.idx_today || Math.max(0, nHist - 1);
+      const hMax = nav.h_max || 150;
+      const xa = Math.max(0, Math.floor(Number(x0) || 0));
+      const xb = Math.max(xa + 1, Math.min(idxToday + hMax, Math.ceil(Number(x1) || (idxToday + hMax))));
+      const tickvals = [];
+      const ticktext = [];
+      const seen = new Set();
+      for (let k = 0; k < 9; k++) {
+        const xv = Math.round(xa + (xb - xa) * (k / 8));
+        if (!seen.has(xv)) {
+          seen.add(xv);
+          tickvals.push(xv);
+          if (xv >= 0 && xv < nHist && dates[xv]) {
+            ticktext.push(dates[xv]);
+          } else {
+            ticktext.push("t+" + Math.max(1, xv - idxToday));
+          }
+        }
+      }
+      return { tickvals, ticktext };
+    }
+
+    function computeVisibleYRange(x0, x1) {
+      const el = document.getElementById("hero-plot");
+      const traces = (el && el.data) || HERO_SPEC.data || [];
+      const nav = HERO_SPEC.nav || {};
+      const coneIndices = (nav.cone_trace_map && nav.cone_trace_map[activeConeKey]) || [];
+      const targetSet = new Set([0, ...(nav.curve_trace_indices || []), ...(nav.det_trace_indices || []), ...coneIndices]);
+      let yMin = Infinity;
+      let yMax = -Infinity;
+
+      targetSet.forEach((tIdx) => {
+        const tr = traces[tIdx];
+        if (!tr || !tr.x) return;
+        const xs = tr.x;
+        if (tr.type === "candlestick" && tr.high && tr.low) {
+          for (let i = 0; i < xs.length; i++) {
+            const xv = xs[i];
+            if (xv == null || xv < x0 || xv > x1) continue;
+            if (tr.high[i] == null || tr.low[i] == null) continue;
+            const hi = Number(tr.high[i]);
+            const lo = Number(tr.low[i]);
+            if (Number.isFinite(lo) && lo < yMin) yMin = lo;
+            if (Number.isFinite(hi) && hi > yMax) yMax = hi;
+          }
+        } else if (tr.y) {
+          for (let i = 0; i < xs.length; i++) {
+            const xv = xs[i];
+            if (xv == null || xv < x0 || xv > x1) continue;
+            if (tr.y[i] == null) continue;
+            const yv = Number(tr.y[i]);
+            if (Number.isFinite(yv)) {
+              if (yv < yMin) yMin = yv;
+              if (yv > yMax) yMax = yv;
+            }
+          }
+        }
+      });
+
+      if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) return null;
+      const pad = yMax > yMin ? (yMax - yMin) * 0.10 : Math.max(Math.abs(yMax) * 0.05, 1.0);
+      return [yMin - pad, yMax + pad];
+    }
+
+    function safeRelayout(el, updates) {
+      isProgrammaticRelayout = true;
+      const p = Plotly.relayout(el, updates);
+      if (p && typeof p.then === "function") {
+        p.finally(() => {
+          setTimeout(() => { isProgrammaticRelayout = false; }, 30);
+        });
+      } else {
+        setTimeout(() => { isProgrammaticRelayout = false; }, 30);
+      }
+    }
+
+    function initHeroChart() {
+      const el = document.getElementById("hero-plot");
+      if (!el || !window.Plotly) return;
+      Plotly.newPlot(el, HERO_SPEC.data, HERO_SPEC.layout, {
+        responsive: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ["lasso2d", "select2d"]
+      }).then(() => {
+        el.on("plotly_relayout", (ev) => {
+          if (isProgrammaticRelayout || !ev) return;
+          if (ev["xaxis.autorange"]) {
+            const btn = document.querySelector('#hz-buttons .hz-btn[data-win-key="' + activeWindowKey + '"]');
+            selectWindow(activeWindowKey, btn);
+            return;
+          }
+          let x0 = ev["xaxis.range[0]"];
+          let x1 = ev["xaxis.range[1]"];
+          if (Array.isArray(ev["xaxis.range"])) {
+            x0 = ev["xaxis.range"][0];
+            x1 = ev["xaxis.range"][1];
+          }
+          if (x0 !== undefined && x1 !== undefined) {
+            const yr = computeVisibleYRange(x0, x1);
+            const ticks = computeXTicks(x0, x1);
+            const upd = { "xaxis.tickvals": ticks.tickvals, "xaxis.ticktext": ticks.ticktext };
+            if (yr) upd["yaxis.range"] = yr;
+            safeRelayout(el, upd);
+          }
+        });
+      });
+    }
+
+    function selectWindow(key, btnEl) {
+      activeWindowKey = key;
+      document.querySelectorAll("#hz-buttons .hz-btn").forEach((b) => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      const preset = HERO_SPEC.presets[key];
+      if (!preset) return;
+      const yr = (preset.y_by_cone && preset.y_by_cone[activeConeKey]) || computeVisibleYRange(preset.x_range[0], preset.x_range[1]);
+      const el = document.getElementById("hero-plot");
+      if (el && window.Plotly) {
+        const upd = {
+          "xaxis.range": preset.x_range,
+          "xaxis.tickvals": preset.tickvals,
+          "xaxis.ticktext": preset.ticktext
+        };
+        if (yr) upd["yaxis.range"] = yr;
+        safeRelayout(el, upd);
+      }
+    }
+
+    function selectCone(coneKey, btnEl) {
+      activeConeKey = coneKey;
+      document.querySelectorAll("#cone-buttons .hz-btn").forEach((b) => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      const nav = HERO_SPEC.nav || {};
+      const readout = document.getElementById("hz-readout");
+      if (readout && nav.cone_readouts && nav.cone_readouts[coneKey]) {
+        readout.textContent = nav.cone_readouts[coneKey];
+      }
+      const el = document.getElementById("hero-plot");
+      if (!el || !window.Plotly) return;
+      const allIdx = nav.all_cone_indices || [];
+      const activeIdx = new Set((nav.cone_trace_map && nav.cone_trace_map[coneKey]) || []);
+      const legIdx = new Set((nav.cone_legend_indices && nav.cone_legend_indices[coneKey]) || []);
+      if (allIdx.length > 0) {
+        const visArr = allIdx.map((idx) => activeIdx.has(idx));
+        const legArr = allIdx.map((idx) => legIdx.has(idx));
+        Plotly.restyle(el, { visible: visArr, showlegend: legArr }, allIdx);
+      }
+      const curRange = (el.layout && el.layout.xaxis && el.layout.xaxis.range) || (HERO_SPEC.presets[activeWindowKey] && HERO_SPEC.presets[activeWindowKey].x_range);
+      if (curRange && curRange.length === 2) {
+        const yr = computeVisibleYRange(curRange[0], curRange[1]);
+        if (yr) safeRelayout(el, { "yaxis.range": yr });
+      }
+    }
+
+    function selectDashboard(key, btnEl) {
+      document.querySelectorAll("#dash-buttons .hz-btn").forEach((b) => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      document.querySelectorAll(".dash-pane").forEach((p) => p.classList.remove("active"));
+      const pane = document.getElementById("dash-pane-" + key);
+      if (pane) pane.classList.add("active");
+    }
+
+    function selectHorizon(key, btnEl) {
+      return selectWindow(key, btnEl);
+    }
+
+    function switchTab(tabId, btnEl) {
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add("active");
+      if (btnEl) btnEl.classList.add("active");
+      if (tabId === "tab-resumen" && window.Plotly) {
+        const el = document.getElementById("hero-plot");
+        if (el) Plotly.Plots.resize(el);
+      }
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      const btn = document.getElementById("theme-toggle");
+      if (btn) btn.textContent = next === "dark" ? "Modo Claro" : "Modo Oscuro";
+      const el = document.getElementById("hero-plot");
+      if (el && window.Plotly) {
+        safeRelayout(el, getPlotThemeLayout(next));
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", initHeroChart);
+  </script>
+</body>
+</html>

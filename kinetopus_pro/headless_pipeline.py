@@ -1,11 +1,10 @@
 """
-Orquestador Headless del Motor Quant KineTopus (Hito 1 + Hito 2 Multi-Lente).
+Orquestador Headless del Motor Quant KineTopus (Hito 1 + Hito 2 + v0.3.1 Enfoque Geométrico Puro).
 
 Ejecuta el pipeline físico-matemático completo de 5 capas + Auto-Calibración +
-Doble Sello de Fiabilidad Estricto (Ljung-Box y Mini Walk-Forward con ventana completa) +
-Geometría Cinemática y Variedad Nominal centrada por mínimos cuadrados,
-aislado al 100% de Streamlit (`app.py`) y respetando la Regla de 16GB RAM
-(matrices C-contiguous `np.float64`, cero Pandas en hot loops).
+Ajuste Curva-Precio + Cono Calibrado de Integración Simple EWMA + Auditoría OOS
+opcional (`--audit-oos`), aislado al 100% de Streamlit (`app.py`) y respetando la
+Regla de 16GB RAM (matrices C-contiguous `np.float64`, cero Pandas en hot loops).
 """
 
 from __future__ import annotations
@@ -51,7 +50,8 @@ class KinetopusAnalysisConfig:
     disable_returns: bool = False
     auto_tune: bool = True
     auto_rescue: bool = True
-    wf_cuts: int = 10
+    audit_oos: bool = False
+    wf_cuts: int = 0
     strict_wf_window: bool = True
     min_wf_effective_cuts: int = 5
     in_process_fft: bool = True
@@ -125,6 +125,514 @@ class KinetopusHeadlessPipeline:
             sigma_dyn[i] = val if val >= 1e-8 else 1e-8
 
         return sigma_dyn
+
+    @staticmethod
+    def _estimate_ewma_return_sigma(residuals: np.ndarray, span: int = 30) -> float:
+        """
+        Estima la volatilidad local EWMA (RiskMetrics, span=30 por defecto) sobre los residuos
+        de retorno `e_t = log_returns - r_smooth`, acotando outliers extremos a ±3.5 MAD-sigma
+        para que un único flash-crash no distorsione meses de difusión estocástica.
+        """
+        if len(residuals) == 0:
+            return 1e-4
+        res = np.ascontiguousarray(residuals, dtype=np.float64)
+        res = res[np.isfinite(res)]
+        if len(res) == 0:
+            return 1e-4
+
+        med = float(np.median(res))
+        mad_sig = 1.4826 * float(np.median(np.abs(res - med)))
+        std_sig = float(np.std(res))
+        scale_ref = max(mad_sig, std_sig * 0.5, 1e-8)
+        clipped = np.clip(res, med - 3.5 * scale_ref, med + 3.5 * scale_ref)
+
+        alpha = 2.0 / (float(max(span, 2)) + 1.0)
+        init_w = min(max(span, 5), len(clipped))
+        var_t = max(float(np.mean(clipped[:init_w] ** 2)), 1e-16)
+        for val in clipped[1:]:
+            var_t = alpha * float(val * val) + (1.0 - alpha) * var_t
+        return float(np.sqrt(max(var_t, 1e-16)))
+
+    @classmethod
+    def _simulate_calibrated_single_integration_cone(
+        cls,
+        last_price: float,
+        det_prices: np.ndarray,
+        precio_raw: np.ndarray,
+        log_returns: np.ndarray,
+        r_smooth: np.ndarray,
+        dt_val: float,
+        unstable_flag: bool,
+        empty_r_eq: bool,
+        disable_returns: bool,
+        disable_norm: bool,
+        random_seed: int = 42,
+        n_paths: int = 2000,
+    ) -> Tuple[List[List[float]], np.ndarray, float]:
+        """
+        Reconstruye el cono Monte Carlo en `kinetopus_pro` aplicando ruido estocástico una
+        única vez sobre incrementos de log-precio alrededor de la deriva determinista SINDy F(t),
+        eliminando la doble integración de ruido de `KineTopus Engine` sin tocar upstream.
+        """
+        classic_mode = bool(disable_returns or disable_norm)
+        if classic_mode:
+            res_base = (
+                np.diff(precio_raw - r_smooth)
+                if len(precio_raw) > 2
+                else (precio_raw - r_smooth)
+            )
+        else:
+            res_base = log_returns - r_smooth
+
+        sigma_ewma = cls._estimate_ewma_return_sigma(res_base, span=30)
+        h_steps = len(det_prices)
+        if (
+            h_steps == 0
+            or unstable_flag
+            or empty_r_eq
+            or not np.all(np.isfinite(det_prices))
+        ):
+            return [], np.empty((0, 0), dtype=np.float64), sigma_ewma
+
+        rng = np.random.default_rng(int(random_seed))
+        dt_scale = float(np.sqrt(max(dt_val, 1e-8)))
+
+        if classic_mode:
+            p_seq = np.concatenate(([last_price], np.asarray(det_prices, dtype=np.float64)))
+            p_steps = np.diff(p_seq)
+            shocks = rng.standard_normal((h_steps, n_paths)) * (sigma_ewma * dt_scale)
+            cum_paths = np.cumsum(p_steps[:, None] + shocks, axis=0)
+            price_paths = np.ascontiguousarray(last_price + cum_paths, dtype=np.float64)
+        else:
+            p_seq = np.maximum(
+                np.concatenate(([last_price], np.asarray(det_prices, dtype=np.float64))),
+                1e-8,
+            )
+            log_p_steps = np.diff(np.log(p_seq))
+            shocks = rng.standard_normal((h_steps, n_paths)) * (sigma_ewma * dt_scale)
+            cum_log_paths = np.cumsum(log_p_steps[:, None] + shocks, axis=0)
+            price_paths = np.ascontiguousarray(
+                max(last_price, 1e-8) * np.exp(np.clip(cum_log_paths, -4.0, 4.0)),
+                dtype=np.float64,
+            )
+
+        pct_matrix = np.percentile(price_paths, [5, 25, 50, 75, 95], axis=1)
+        percentiles_list = [[float(v) for v in row] for row in pct_matrix]
+        return percentiles_list, price_paths, sigma_ewma
+
+    @staticmethod
+    def humanize_code(category: str, code: Optional[str]) -> str:
+        """Traduce códigos enum internos a etiquetas humanas limpias en español."""
+        if not code:
+            return "No disponible"
+        maps: Dict[str, Dict[str, str]] = {
+            "seal_grade": {
+                "APROBADO_PLENO": "Validado pleno",
+                "APROBADO_CONDICIONAL": "Validado condicional",
+                "REPROBADO_EXOGENO": "Sin sello (dinámica exógena OOS)",
+                "REPROBADO_BAJO_R2": "Sin sello (ajuste interno débil)",
+                "INSUFICIENTE": "Sin sello (historial OOS insuficiente)",
+                "FALLO_ESTABILIDAD": "Sin sello (inestabilidad numérica)",
+                "NO_EVALUADO": "Omitido (--audit-oos)",
+                "GEOMETRICO_PURO": "Geometría activa (sin filtro OOS)",
+                "N/D": "No disponible",
+            },
+            "physics_class": {
+                "COHERENTE_INERCIAL": "Inercial coherente",
+                "TRANSICIONAL_BORDE": "Transicional",
+                "EXOGENO_FUNDAMENTALISTA": "Dominado por choques externos",
+                "INESTABLE_O_RUIDO_EXTREMO": "Ruido extremo",
+                "INSUFICIENTE": "Muestra insuficiente",
+                "NO_EVALUADO": "Omitido (usar --audit-oos)",
+            },
+            "topology": {
+                "COMPRESION_EQUILIBRIO_CENTRAL": "Compresión en equilibrio",
+                "ESCAPE_RUPTURA_CENTRIFUGA": "Ruptura en expansión",
+                "ESPIRAL_AMORTIGUADA_CONVERGENTE": "Espiral amortiguada al equilibrio",
+                "CICLO_ORBITAL_ACTIVO": "Ciclo orbital activo",
+            },
+            "cusum_status": {
+                "ESTABLE": "Estable",
+                "TENSION_ALTA": "Tensión alta",
+                "QUIEBRE_INMINENTE": "Riesgo de quiebre inminente",
+            },
+            "confidence": {
+                "ALTA": "ALTA",
+                "MEDIA": "MEDIA",
+                "BAJA": "BAJA",
+                "BAJA_CAUTELA": "BAJA",
+                "NULA_O_DEGRADADA": "BAJA",
+            },
+        }
+        return maps.get(category, {}).get(str(code), str(code).replace("_", " ").capitalize())
+
+    @classmethod
+    def classify_human_regime(
+        cls,
+        last_price: float,
+        window_max_price: float,
+        gap_now_pct: float,
+        vel_now: float,
+        acc_now: float,
+        det_prices: np.ndarray,
+        sigma_ewma: float,
+        unstable_flag: bool,
+        empty_r_eq: bool,
+        disable_returns: bool,
+        topology_class: str,
+        cusum_status: str,
+        seal_grade: str,
+    ) -> Dict[str, Any]:
+        """
+        Clasifica el estado del activo en la taxonomía humana de 5 estados + modificador
+        de posición respecto a la variedad suave (Decisión 6).
+        """
+        if disable_returns:
+            sigma_pct = (sigma_ewma / max(abs(last_price), 1e-8)) * 100.0
+        else:
+            sigma_pct = sigma_ewma * 100.0
+
+        ref_step = min(63, len(det_prices)) if len(det_prices) > 0 else 0
+        noise_band_pct = max(0.50, 0.35 * sigma_pct * float(np.sqrt(max(ref_step, 1))))
+
+        if ref_step > 0 and not unstable_flag and not empty_r_eq and abs(last_price) > 1e-8:
+            det_ret_ref_pct = ((float(det_prices[ref_step - 1]) - last_price) / last_price) * 100.0
+        elif empty_r_eq:
+            det_ret_ref_pct = 0.0
+        else:
+            det_ret_ref_pct = vel_now * float(max(ref_step, 21))
+
+        near_highs = window_max_price > 0 and last_price >= 0.95 * window_max_price
+
+        if abs(det_ret_ref_pct) <= noise_band_pct:
+            state_code = "LATERAL_DIGESTION"
+            family_label = "Lateral / Digestión"
+            state_label = "Lateral en máximos" if near_highs else "Lateral / Digestión"
+            state_summary = (
+                f"La deriva proyectada a {ref_step or 63} velas ({det_ret_ref_pct:+.2f}%) es menor que la "
+                f"banda de ruido normal del activo (±{noise_band_pct:.2f}%): el mercado digiere en rango."
+            )
+        elif det_ret_ref_pct > noise_band_pct:
+            if acc_now >= 0.0:
+                state_code = "IMPULSO_ALCISTA"
+                family_label = "Impulso alcista"
+                state_label = "Impulso alcista"
+                state_summary = (
+                    f"Avance proyectado ({det_ret_ref_pct:+.2f}% a {ref_step}v) superando el ruido base "
+                    "con aceleración sostenida."
+                )
+            else:
+                state_code = "ALCISTA_FRENANDO"
+                family_label = "Alcista frenando"
+                state_label = "Alcista frenando"
+                state_summary = (
+                    f"Pendiente aún alcista ({det_ret_ref_pct:+.2f}% a {ref_step}v), pero perdiendo velocidad "
+                    "(desaceleración activa)."
+                )
+        else:
+            if acc_now <= 0.0:
+                state_code = "CORRECCION_BAJISTA"
+                family_label = "Corrección bajista"
+                state_label = "Corrección bajista"
+                state_summary = (
+                    f"Presión vendedora dominante ({det_ret_ref_pct:+.2f}% proyectado a {ref_step}v) "
+                    "sin señal de giro todavía."
+                )
+            else:
+                state_code = "CAIDA_FRENANDO_SUELO"
+                family_label = "Caída frenando / Suelo en formación"
+                state_label = "Caída frenando / Suelo en formación"
+                state_summary = (
+                    f"Inercia todavía descendente ({det_ret_ref_pct:+.2f}% a {ref_step}v), pero frenando su "
+                    "velocidad de caída (posible formación de suelo)."
+                )
+
+        ext_thresh_pct = max(2.5, 2.0 * sigma_pct)
+        if gap_now_pct >= ext_thresh_pct:
+            pos_code = "SOBREEXTENDIDO"
+            pos_short = f"sobreextendido {gap_now_pct:+.1f}%"
+            pos_detail = f"sobreextendido {gap_now_pct:+.1f}% sobre su curva"
+        elif gap_now_pct <= -ext_thresh_pct:
+            pos_code = "DESCOLGADO"
+            pos_short = f"descolgado {gap_now_pct:+.1f}%"
+            pos_detail = f"descolgado {gap_now_pct:+.1f}% bajo su curva"
+        else:
+            pos_code = "EN_LINEA"
+            pos_short = f"cerca de su curva ({gap_now_pct:+.1f}%)"
+            pos_detail = f"alineado con su curva ({gap_now_pct:+.1f}%)"
+
+        return {
+            "state_code": state_code,
+            "family_label": family_label,
+            "state_label": state_label,
+            "near_window_highs": bool(near_highs),
+            "position_code": pos_code,
+            "position_short": pos_short,
+            "position_modifier": pos_detail,
+            "full_label": f"{state_label} · {pos_short}",
+            "reference_step_candles": int(ref_step),
+            "projected_reference_return_pct": round(float(det_ret_ref_pct), 2),
+            "natural_noise_band_pct": round(float(noise_band_pct), 2),
+            "daily_ewma_volatility_pct": round(float(sigma_pct), 3),
+            "overextension_threshold_pct": round(float(ext_thresh_pct), 2),
+            "topology_human": cls.humanize_code("topology", topology_class),
+            "cusum_human": cls.humanize_code("cusum_status", cusum_status),
+            "seal_human": cls.humanize_code("seal_grade", seal_grade),
+            "plain_summary": state_summary,
+        }
+
+    @classmethod
+    def _compute_probabilistic_scenarios(
+        cls,
+        last_price: float,
+        nominal_smooth_now: float,
+        det_prices: np.ndarray,
+        mc_percentiles: List[List[float]],
+        price_paths: np.ndarray,
+        horizon_steps: int,
+    ) -> Dict[str, Any]:
+        """
+        Calcula los 3 escenarios geométricos del motor v0.3.1 (Central, Expansión Alcista P75,
+        Reversión Bajista P25) centrados en la curva 1000v y los cuartiles P25/P75 calibrados,
+        con probabilidades exactas de primer toque antes de `t+H` sobre las 2000 trayectorias EWMA.
+        """
+        has_paths = (
+            price_paths.ndim == 2
+            and price_paths.shape[0] > 0
+            and price_paths.shape[1] > 0
+            and len(det_prices) > 0
+            and len(mc_percentiles) == 5
+        )
+        h_eff = int(len(det_prices)) if len(det_prices) > 0 else int(horizon_steps)
+
+        if not has_paths:
+            return {
+                "available": False,
+                "validated": False,
+                "horizon_step": f"t+{h_eff}",
+                "n_simulations": 0,
+                "base": None,
+                "bullish": None,
+                "bearish": None,
+            }
+
+        n_sims = int(price_paths.shape[1])
+        idx_end = len(det_prices) - 1
+        idx_mid = min(20, idx_end)
+
+        base_center = float(det_prices[idx_end])
+        p5_end = float(mc_percentiles[0][idx_end])
+        p25_end = float(mc_percentiles[1][idx_end])
+        p50_end = float(mc_percentiles[2][idx_end])
+        p75_end = float(mc_percentiles[3][idx_end])
+        p95_end = float(mc_percentiles[4][idx_end])
+
+        p25_mid = float(mc_percentiles[1][idx_mid])
+        p75_mid = float(mc_percentiles[3][idx_mid])
+
+        # Garantizar objetivos y gatillos monótonos centrados en cuartiles P25/P75 y curva suave
+        bull_target = p75_end if p75_end > last_price * 1.006 else max(p95_end, last_price * 1.010)
+        cand_bull_trig = max(
+            p75_mid,
+            nominal_smooth_now if nominal_smooth_now > last_price else p75_mid,
+            last_price * 1.002,
+        )
+        bull_trigger = min(cand_bull_trig, bull_target * 0.995)
+        if bull_trigger <= last_price:
+            bull_trigger = last_price + max((bull_target - last_price) * 0.35, last_price * 0.002)
+            bull_trigger = min(bull_trigger, bull_target * 0.996)
+
+        bear_target = p25_end if p25_end < last_price * 0.994 else min(p5_end, last_price * 0.990)
+        cand_bear_trig = min(
+            p25_mid,
+            nominal_smooth_now if nominal_smooth_now < last_price else p25_mid,
+            last_price * 0.998,
+        )
+        bear_trigger = max(cand_bear_trig, bear_target * 1.005)
+        if bear_trigger >= last_price:
+            bear_trigger = last_price - max((last_price - bear_target) * 0.35, last_price * 0.002)
+            bear_trigger = max(bear_trigger, bear_target * 1.004)
+
+        if abs(base_center - last_price) / max(abs(last_price), 1e-8) < 0.0025:
+            lo_b = min(last_price, base_center) * 0.9975
+            hi_b = max(last_price, base_center) * 1.0025
+            touch_base_mask = np.any((price_paths >= lo_b) & (price_paths <= hi_b), axis=0)
+        elif base_center >= last_price:
+            touch_base_mask = np.max(price_paths, axis=0) >= base_center
+        else:
+            touch_base_mask = np.min(price_paths, axis=0) <= base_center
+
+        touch_bull_trig_mask = np.max(price_paths, axis=0) >= bull_trigger
+        touch_bull_tgt_mask = np.max(price_paths, axis=0) >= bull_target
+        touch_bear_trig_mask = np.min(price_paths, axis=0) <= bear_trigger
+        touch_bear_tgt_mask = np.min(price_paths, axis=0) <= bear_target
+
+        final_prices = price_paths[-1, :]
+        stay_iqr_mask = (final_prices >= p25_end) & (final_prices <= p75_end)
+
+        prob_touch_base = float(np.mean(touch_base_mask) * 100.0)
+        prob_stay_iqr = float(np.mean(stay_iqr_mask) * 100.0)
+        prob_touch_bull = float(np.mean(touch_bull_tgt_mask) * 100.0)
+        prob_trig_bull = float(np.mean(touch_bull_trig_mask) * 100.0)
+        prob_touch_bear = float(np.mean(touch_bear_tgt_mask) * 100.0)
+        prob_trig_bear = float(np.mean(touch_bear_trig_mask) * 100.0)
+
+        up_trig_pct = ((bull_trigger / last_price) - 1.0) * 100.0 if last_price > 0 else 0.0
+        dn_trig_pct = ((bear_trigger / last_price) - 1.0) * 100.0 if last_price > 0 else 0.0
+        base_ret_pct = ((base_center - last_price) / last_price) * 100.0 if last_price > 0 else 0.0
+        bull_ret_pct = ((bull_target - last_price) / last_price) * 100.0 if last_price > 0 else 0.0
+        bear_ret_pct = ((bear_target - last_price) / last_price) * 100.0 if last_price > 0 else 0.0
+        p95_ret_pct = ((p95_end - last_price) / last_price) * 100.0 if last_price > 0 else 0.0
+        p5_ret_pct = ((p5_end - last_price) / last_price) * 100.0 if last_price > 0 else 0.0
+
+        return {
+            "available": True,
+            "validated": True,
+            "horizon_step": f"t+{h_eff}",
+            "n_simulations": n_sims,
+            "prob_stay_within_iqr_pct": round(prob_stay_iqr, 1),
+            "base": {
+                "code": "BASE",
+                "name": "Escenario Central (Deriva 1000v · P25–P75)",
+                "trigger_condition": (
+                    f"Sostener deriva dentro del corredor P25–P75 ({p25_end:,.2f} – {p75_end:,.2f})"
+                ),
+                "trigger_low_price": round(p25_end, 4),
+                "trigger_high_price": round(p75_end, 4),
+                "target_price": round(base_center, 4),
+                "target_return_pct": round(base_ret_pct, 2),
+                "band_p25_price": round(p25_end, 4),
+                "band_p50_price": round(p50_end, 4),
+                "band_p75_price": round(p75_end, 4),
+                "touch_probability_pct": round(prob_touch_base, 1),
+                "channel_survival_probability_pct": round(prob_stay_iqr, 1),
+            },
+            "bullish": {
+                "code": "ALCISTA",
+                "name": "Expansión Alcista (Hacia Cuartil Superior P75)",
+                "trigger_condition": f"Tracción sostenida sobre {bull_trigger:,.2f} ({up_trig_pct:+.2f}%)",
+                "trigger_price": round(float(bull_trigger), 4),
+                "trigger_pct_from_close": round(float(up_trig_pct), 2),
+                "trigger_touch_probability_pct": round(prob_trig_bull, 1),
+                "target_price": round(float(bull_target), 4),
+                "target_return_pct": round(float(bull_ret_pct), 2),
+                "stretch_p95_price": round(float(p95_end), 4),
+                "stretch_p95_return_pct": round(float(p95_ret_pct), 2),
+                "touch_probability_pct": round(prob_touch_bull, 1),
+            },
+            "bearish": {
+                "code": "BAJISTA",
+                "name": "Reversión Bajista (Hacia Cuartil Inferior P25)",
+                "trigger_condition": f"Debilidad sostenida bajo {bear_trigger:,.2f} ({dn_trig_pct:+.2f}%)",
+                "trigger_price": round(float(bear_trigger), 4),
+                "trigger_pct_from_close": round(float(dn_trig_pct), 2),
+                "trigger_touch_probability_pct": round(prob_trig_bear, 1),
+                "target_price": round(float(bear_target), 4),
+                "target_return_pct": round(float(bear_ret_pct), 2),
+                "stretch_p5_price": round(float(p5_end), 4),
+                "stretch_p5_return_pct": round(float(p5_ret_pct), 2),
+                "touch_probability_pct": round(prob_touch_bear, 1),
+            },
+        }
+
+    @staticmethod
+    def _compute_curve_price_fit(
+        precio_raw: np.ndarray,
+        nominal_smooth: np.ndarray,
+        act_s: int,
+        act_e: int,
+    ) -> Dict[str, Any]:
+        """Mide qué tan fielmente la curva suave `nominal_smooth` sigue al precio observado."""
+        p = np.asarray(precio_raw, dtype=np.float64)
+        s = np.asarray(nominal_smooth, dtype=np.float64)
+
+        def _r2_mape_rmse(pa: np.ndarray, sa: np.ndarray) -> Tuple[float, float, float]:
+            if len(pa) == 0:
+                return 0.0, 0.0, 0.0
+            ss_res = float(np.sum((pa - sa) ** 2))
+            ss_tot = float(np.sum((pa - np.mean(pa)) ** 2))
+            r2 = 1.0 if ss_tot < 1e-12 else float(np.clip(1.0 - (ss_res / ss_tot), -1.0, 1.0))
+            mape = float(np.mean(np.abs(pa - sa) / np.maximum(np.abs(pa), 1e-8)) * 100.0)
+            rmse = float(np.sqrt(np.mean((pa - sa) ** 2)))
+            return r2, mape, rmse
+
+        win_r2, win_mape, win_rmse = _r2_mape_rmse(p, s)
+        a_s = max(0, min(int(act_s), max(0, len(p) - 1)))
+        a_e = max(a_s + 1, min(int(act_e), len(p)))
+        if a_e - a_s >= 3:
+            act_r2, act_mape, _ = _r2_mape_rmse(p[a_s:a_e], s[a_s:a_e])
+        else:
+            act_r2, act_mape = win_r2, win_mape
+
+        if win_r2 >= 0.90:
+            quality_lbl = "Fidelidad alta"
+        elif win_r2 >= 0.75:
+            quality_lbl = "Fidelidad buena"
+        elif win_r2 >= 0.50:
+            quality_lbl = "Tendencia suavizada"
+        else:
+            quality_lbl = "Tendencia amplia"
+
+        return {
+            "window_price_r2": round(win_r2, 4),
+            "active_regime_price_r2": round(act_r2, 4),
+            "mape_pct": round(win_mape, 3),
+            "window_price_mape_pct": round(win_mape, 3),
+            "active_regime_mape_pct": round(act_mape, 3),
+            "rmse_price": round(win_rmse, 4),
+            "fit_quality_label": quality_lbl,
+            "fit_label": quality_lbl,
+        }
+
+    @staticmethod
+    def _ensure_geometric_projection(
+        last_price: float,
+        raw_det_t: np.ndarray,
+        raw_det_prices: np.ndarray,
+        horizon_steps: int,
+        dt_val: float,
+        t_end: float,
+        r_smooth: np.ndarray,
+        r_dot: np.ndarray,
+        unstable_flag: bool,
+        empty_r_eq: bool,
+        disable_returns: bool,
+    ) -> Tuple[np.ndarray, np.ndarray, bool]:
+        """Garantiza siempre una proyección finita `t+H` aunque la EDO SINDy sea nula o inestable."""
+        h_steps = max(1, int(horizon_steps))
+        step_dt = float(dt_val) if dt_val > 0 else 1.0
+        det_t_fallback = np.ascontiguousarray(
+            float(t_end) + np.arange(1, h_steps + 1, dtype=np.float64) * step_dt,
+            dtype=np.float64,
+        )
+        raw_t_arr = np.asarray(raw_det_t if raw_det_t is not None else [], dtype=np.float64).reshape(-1)
+        det_prices_arr = np.asarray(raw_det_prices if raw_det_prices is not None else [], dtype=np.float64).reshape(-1)
+        det_t_valid = (
+            len(raw_t_arr) == h_steps
+            and bool(np.all(np.isfinite(raw_t_arr)))
+            and float(raw_t_arr[0]) >= float(t_end)
+        )
+        det_t_out = np.ascontiguousarray(raw_t_arr, dtype=np.float64) if det_t_valid else det_t_fallback
+
+        bad_vals = (
+            unstable_flag
+            or empty_r_eq
+            or len(det_prices_arr) != h_steps
+            or not bool(np.all(np.isfinite(det_prices_arr)))
+            or (not disable_returns and bool(np.any(det_prices_arr <= 0.0)))
+        )
+        if not bad_vals:
+            return det_t_out, np.ascontiguousarray(det_prices_arr, dtype=np.float64), False
+
+        steps_k = np.arange(1, h_steps + 1, dtype=np.float64)
+        if disable_returns:
+            v0 = float(r_dot[-1]) if len(r_dot) > 0 and np.isfinite(r_dot[-1]) else 0.0
+            fallback_p = float(last_price) + np.cumsum(v0 * (0.975**steps_k))
+        else:
+            r0_raw = float(r_smooth[-1]) if len(r_smooth) > 0 and np.isfinite(r_smooth[-1]) else 0.0
+            r0 = float(np.clip(r0_raw, -0.05, 0.05))
+            fallback_p = max(float(last_price), 1e-8) * np.exp(np.cumsum(r0 * (0.975**steps_k)))
+        return det_t_fallback, np.ascontiguousarray(fallback_p, dtype=np.float64), True
 
     @staticmethod
     def compute_nominal_smooth(
@@ -628,8 +1136,18 @@ class KinetopusHeadlessPipeline:
         n_total = len(price_full)
         req_window = int(cfg.context_window) if cfg.context_window > 0 else 0
         min_req_cuts = int(cfg.min_wf_effective_cuts)
+        eff_wf_cuts = int(cfg.wf_cuts) if int(cfg.wf_cuts) > 0 else (10 if bool(cfg.audit_oos) else 0)
 
-        if cfg.wf_cuts <= 0:
+        empty_cone_cal = {
+            "evaluated": False,
+            "target_iqr_coverage_pct": 50.0,
+            "empirical_p25_p75_coverage_pct": None,
+            "empirical_p5_p95_coverage_pct": None,
+            "iqr_calibration_bias_pts": None,
+            "calibration_label": "No evaluado",
+        }
+
+        if eff_wf_cuts <= 0:
             return {
                 "executed": False,
                 "strict_full_window_enforced": bool(cfg.strict_wf_window and req_window > 0),
@@ -637,8 +1155,9 @@ class KinetopusHeadlessPipeline:
                 "min_required_effective_cuts": min_req_cuts,
                 "effective_cuts": 0,
                 "seal_approved": False,
-                "reason": "Walk-Forward desactivado por configuración (wf_cuts <= 0).",
+                "reason": "Walk-Forward OOS omitido por defecto en v0.3.1 (activar con --audit-oos).",
                 "asset_physics_class": "NO_EVALUADO",
+                "cone_calibration": empty_cone_cal,
             }
 
         eval_h = min(cfg.horizon_steps, max(20, min(90, n_total // 6)))
@@ -663,6 +1182,7 @@ class KinetopusHeadlessPipeline:
                     "validity_rate_pct": 0.0,
                     "seal_approved": False,
                     "asset_physics_class": "INSUFICIENTE",
+                    "cone_calibration": empty_cone_cal,
                     "reason": (
                         f"Historial total ({n_total}v) insuficiente para formar al menos 1 corte OOS "
                         f"de ventana completa ({req_window}v + horizonte {eval_h}v)."
@@ -674,7 +1194,7 @@ class KinetopusHeadlessPipeline:
                 }
 
             max_possible_cuts = ((max_cut - min_cut) // min_stride) + 1
-            n_place = min(int(cfg.wf_cuts), int(max_possible_cuts))
+            n_place = min(eff_wf_cuts, int(max_possible_cuts))
             if n_place <= 1:
                 cut_indices = [int(max_cut)]
             else:
@@ -693,9 +1213,10 @@ class KinetopusHeadlessPipeline:
                     "seal_approved": False,
                     "reason": "Historial insuficiente para validación Walk-Forward Out-of-Sample.",
                     "asset_physics_class": "NO_EVALUADO",
+                    "cone_calibration": empty_cone_cal,
                 }
             cut_indices = sorted(
-                list(set(int(c) for c in np.linspace(min_train, max_cut, num=cfg.wf_cuts, dtype=int)))
+                list(set(int(c) for c in np.linspace(min_train, max_cut, num=eff_wf_cuts, dtype=int)))
             )
 
         short_step = min(10, eval_h)
@@ -708,10 +1229,14 @@ class KinetopusHeadlessPipeline:
         mapes_full: List[float] = []
         naive_mapes_full: List[float] = []
         r2_list: List[float] = []
+        cov_iqr_cuts: List[float] = []
+        cov_90_cuts: List[float] = []
         train_lengths_used: List[int] = []
         valid_count = 0
 
         eps = 1e-8
+        k_steps_arr = np.arange(1, eval_h + 1, dtype=np.float64) * max(dt_val, 1e-8)
+        sqrt_k_arr = np.sqrt(k_steps_arr)
 
         for cut in cut_indices:
             win_start = (cut - req_window) if req_window > 0 else 0
@@ -862,6 +1387,27 @@ class KinetopusHeadlessPipeline:
             mapes_full.append(mape_val)
             naive_mapes_full.append(naive_val)
 
+            # Calibración causal OOS del cono de integración simple (Decisión 2, no bloqueante)
+            classic_cut = bool(cfg.disable_returns or cfg.disable_norm)
+            if classic_cut:
+                res_cut = np.diff(p_train - rs) if len(p_train) > 2 else (p_train - rs)
+                sigma_cut = self._estimate_ewma_return_sigma(res_cut, span=30)
+                err_abs = np.abs(p_future - det_path)
+                half_iqr = 0.67448975 * sigma_cut * sqrt_k_arr
+                half_90 = 1.64485363 * sigma_cut * sqrt_k_arr
+                cov_iqr_cuts.append(float(np.mean(err_abs <= half_iqr) * 100.0))
+                cov_90_cuts.append(float(np.mean(err_abs <= half_90) * 100.0))
+            else:
+                res_cut = r_train - rs
+                sigma_cut = self._estimate_ewma_return_sigma(res_cut, span=30)
+                det_safe = np.maximum(det_path, eps)
+                fut_safe = np.maximum(p_future, eps)
+                log_err = np.abs(np.log(fut_safe) - np.log(det_safe))
+                half_iqr = 0.67448975 * sigma_cut * sqrt_k_arr
+                half_90 = 1.64485363 * sigma_cut * sqrt_k_arr
+                cov_iqr_cuts.append(float(np.mean(log_err <= half_iqr) * 100.0))
+                cov_90_cuts.append(float(np.mean(log_err <= half_90) * 100.0))
+
         total_cuts = len(cut_indices)
         if valid_count == 0:
             insufficient_flag = cfg.strict_wf_window and total_cuts < min_req_cuts
@@ -878,6 +1424,7 @@ class KinetopusHeadlessPipeline:
                 "validity_rate_pct": 0.0,
                 "seal_approved": False,
                 "asset_physics_class": cls_zero,
+                "cone_calibration": empty_cone_cal,
                 "warning": "Ningún corte histórico de ventana completa produjo una EDO predictiva válida.",
                 "interpretation": (
                     f"Sello {cls_zero} (0/{min_req_cuts} cortes efectivos): no aprueba validación OOS."
@@ -890,6 +1437,25 @@ class KinetopusHeadlessPipeline:
         hr_consensus = 0.5 * hr_mid + 0.5 * hr_full
         med_mape = float(np.median(mapes_full))
         med_naive = float(np.median(naive_mapes_full))
+
+        cov_iqr_pct = float(np.mean(cov_iqr_cuts)) if cov_iqr_cuts else 0.0
+        cov_90_pct = float(np.mean(cov_90_cuts)) if cov_90_cuts else 0.0
+        iqr_bias = cov_iqr_pct - 50.0
+        if 38.0 <= cov_iqr_pct <= 62.0:
+            cal_label = "Bien calibrado"
+        elif cov_iqr_pct > 62.0:
+            cal_label = "Banda conservadora (amplia)"
+        else:
+            cal_label = "Banda estrecha"
+
+        cone_calibration = {
+            "evaluated": True,
+            "target_iqr_coverage_pct": 50.0,
+            "empirical_p25_p75_coverage_pct": round(cov_iqr_pct, 2),
+            "empirical_p5_p95_coverage_pct": round(cov_90_pct, 2),
+            "iqr_calibration_bias_pts": round(iqr_bias, 2),
+            "calibration_label": cal_label,
+        }
 
         if valid_count < min_req_cuts:
             phys_class = "INSUFICIENTE"
@@ -921,6 +1487,7 @@ class KinetopusHeadlessPipeline:
             )
 
         return {
+            "audit_enabled": True,
             "executed": True,
             "strict_full_window_enforced": bool(cfg.strict_wf_window and req_window > 0),
             "required_window_candles": req_window,
@@ -942,6 +1509,7 @@ class KinetopusHeadlessPipeline:
             "median_naive_mape_pct": round(med_naive, 2),
             "mape_alpha_vs_naive_pct": round(med_naive - med_mape, 2),
             "mean_historical_r2": round(float(np.mean(r2_list)), 4),
+            "cone_calibration": cone_calibration,
             "asset_physics_class": phys_class,
             "interpretation": class_note,
         }
@@ -954,8 +1522,12 @@ class KinetopusHeadlessPipeline:
         tension_ratio: float,
         is_unstable: bool,
         empty_eq: bool,
+        geometric_fallback_used: bool = False,
     ) -> Dict[str, Any]:
-        """Consolida Ljung-Box + Mini Walk-Forward Estricto en un veredicto unificado de Doble Sello."""
+        """
+        Consolida diagnóstico geométrico v0.3.1 + Ljung-Box (+ Walk-Forward OOS solo si --audit-oos).
+        Elimina bloqueos por SINDy R² < 0.35 o por omisión de Walk-Forward.
+        """
         reasons: List[str] = []
         spline_wn = lb_seal.get("spline_residuals", {}).get("is_white_noise_alpha_05")
         wf_cls = wf_seal.get("asset_physics_class", "NO_EVALUADO")
@@ -963,10 +1535,11 @@ class KinetopusHeadlessPipeline:
         min_cuts = int(wf_seal.get("min_required_effective_cuts", 5))
         hr_pct = wf_seal.get("consensus_hit_ratio_pct")
 
-        if is_unstable or empty_eq:
-            reasons.append("Fallo de estabilidad SINDy o ecuación de retorno anulada.")
+        if (is_unstable or empty_eq) and not geometric_fallback_used:
+            reasons.append("Fallo de estabilidad SINDy o ecuación de retorno anulada sin respaldo cinemático.")
             return {
                 "seal_passed": False,
+                "geometric_valid": False,
                 "seal_grade": "FALLO_ESTABILIDAD",
                 "wf_passed": False,
                 "ljung_box_spline_white_noise": spline_wn,
@@ -975,12 +1548,22 @@ class KinetopusHeadlessPipeline:
                 "reasons": reasons,
             }
 
+        if geometric_fallback_used:
+            reasons.append("Inestabilidad o dr/dt=0 SINDy cubierta con respaldo cinemático amortiguado sobre la variedad.")
+
         if wf_cls == "NO_EVALUADO":
-            reasons.append("Walk-Forward OOS no ejecutado.")
+            reasons.append("Enfoque geométrico puro v0.3.1 (Walk-Forward OOS omitido; activar con --audit-oos).")
+            if spline_wn is False:
+                reasons.append("Ljung-Box detecta autocorrelación residual en el Spline (p <= 0.05).")
+            elif spline_wn is True:
+                reasons.append("Ljung-Box certifica ruido blanco en residuos del Spline (p > 0.05).")
+            if tension_ratio > 0.85:
+                reasons.append(f"Tensión CUSUM elevada ({tension_ratio:.0%} de H).")
             return {
-                "seal_passed": False,
-                "seal_grade": "NO_EVALUADO",
-                "wf_passed": False,
+                "seal_passed": True,
+                "geometric_valid": True,
+                "seal_grade": "GEOMETRICO_PURO",
+                "wf_passed": None,
                 "ljung_box_spline_white_noise": spline_wn,
                 "effective_oos_cuts": eff_cuts,
                 "min_required_oos_cuts": min_cuts,
@@ -988,9 +1571,10 @@ class KinetopusHeadlessPipeline:
             }
 
         if wf_cls == "INSUFICIENTE" or eff_cuts < min_cuts:
-            reasons.append(f"Cortes OOS efectivos insuficientes ({eff_cuts}/{min_cuts}).")
+            reasons.append(f"Auditoría --audit-oos: cortes efectivos insuficientes ({eff_cuts}/{min_cuts}).")
             return {
                 "seal_passed": False,
+                "geometric_valid": True,
                 "seal_grade": "INSUFICIENTE",
                 "wf_passed": False,
                 "ljung_box_spline_white_noise": spline_wn,
@@ -1000,9 +1584,10 @@ class KinetopusHeadlessPipeline:
             }
 
         if wf_cls in ("EXOGENO_FUNDAMENTALISTA", "INESTABLE_O_RUIDO_EXTREMO"):
-            reasons.append(f"Walk-Forward OOS reprobado ({wf_cls}, HR={hr_pct}%).")
+            reasons.append(f"Auditoría --audit-oos reprobada ({wf_cls}, HR={hr_pct}%).")
             return {
                 "seal_passed": False,
+                "geometric_valid": True,
                 "seal_grade": "REPROBADO_EXOGENO",
                 "wf_passed": False,
                 "ljung_box_spline_white_noise": spline_wn,
@@ -1011,21 +1596,9 @@ class KinetopusHeadlessPipeline:
                 "reasons": reasons,
             }
 
-        if active_r2 < 0.35:
-            reasons.append(f"Pureza interna SINDy demasiado débil (R²={active_r2:.3f} < 0.35).")
-            return {
-                "seal_passed": False,
-                "seal_grade": "REPROBADO_BAJO_R2",
-                "wf_passed": True,
-                "ljung_box_spline_white_noise": spline_wn,
-                "effective_oos_cuts": eff_cuts,
-                "min_required_oos_cuts": min_cuts,
-                "reasons": reasons,
-            }
-
         # Walk-Forward aprobado (COHERENTE_INERCIAL o TRANSICIONAL_BORDE)
-        reasons.append(f"Walk-Forward OOS aprobado ({wf_cls}, HR={hr_pct}%, {eff_cuts} cortes).")
-        conditional = False
+        reasons.append(f"Auditoría --audit-oos aprobada ({wf_cls}, HR={hr_pct}%, {eff_cuts} cortes). SINDy R² informativo={active_r2:.3f}.")
+        conditional = bool(geometric_fallback_used)
         if wf_cls == "TRANSICIONAL_BORDE":
             conditional = True
             reasons.append("Coherencia OOS en franja transicional (50%-55%).")
@@ -1040,6 +1613,7 @@ class KinetopusHeadlessPipeline:
 
         return {
             "seal_passed": True,
+            "geometric_valid": True,
             "seal_grade": "APROBADO_CONDICIONAL" if conditional else "APROBADO_PLENO",
             "wf_passed": True,
             "ljung_box_spline_white_noise": spline_wn,
@@ -1199,7 +1773,15 @@ class KinetopusHeadlessPipeline:
             det_r_pct_path = np.array([], dtype=np.float64)
             det_v_path = np.array([], dtype=np.float64)
 
+        curve_price_fit = self._compute_curve_price_fit(
+            precio_raw=precio_raw,
+            nominal_smooth=nominal_smooth,
+            act_s=act_s,
+            act_e=act_e,
+        )
+
         geometry_dict = {
+            "curve_price_fit": curve_price_fit,
             "kinematics": {
                 "velocity_dr_dt": round(vel_now, 6),
                 "acceleration_d2r_dt2": round(acc_now, 6),
@@ -1366,9 +1948,13 @@ class KinetopusHeadlessPipeline:
             "regimes_summary": regime_catalog,
         }
 
-        # 4. Silueta del Cono Estocástico y Proyección Determinística (incluye hitos 1s/1m/3m para cripto y bolsa)
+        # 4. Silueta del Cono Estocástico y Proyección Determinística (siempre proyecta t+150)
         p_percentiles = pred.get("price_percentiles", [])
-        has_mc = len(p_percentiles) == 5 and len(p_percentiles[0]) > 0 and not active_report.get("empty_r_eq", False)
+        has_mc = (
+            len(p_percentiles) == 5
+            and len(det_prices) > 0
+            and len(p_percentiles[0]) == len(det_prices)
+        )
 
         raw_milestones = [1, 5, 7, 15, 21, 30, 60, 63, 90, 100, cfg.horizon_steps]
         milestones = sorted(list({m for m in raw_milestones if 1 <= m <= cfg.horizon_steps}))
@@ -1538,22 +2124,25 @@ class KinetopusHeadlessPipeline:
             cusum_k=effective_k,
         )
 
-        # 4. Autopilot Quant (Rescate 2D aplicado automáticamente si el régimen es inestable)
+        # 4. Autopilot Quant (Rescate 2D solo ante inestabilidad numérica o dr/dt = 0; nunca por R²)
         active_rep = core_out["active_report"]
-        if cfg.auto_rescue and active_rep.get("prediction", {}).get("unstable", False):
-            orig_r2 = float(active_rep.get("score", 0.0))
-            orig_empty = bool(active_rep.get("empty_r_eq", False))
+        orig_unstable = bool(active_rep.get("prediction", {}).get("unstable", False))
+        orig_empty = bool(active_rep.get("empty_r_eq", False))
+        orig_r2 = float(active_rep.get("score", 0.0))
+
+        if cfg.auto_rescue and (orig_unstable or orig_empty):
             reason = (
                 "Ecuación de retorno anulada (dr/dt = 0) por exceso de filtrado."
                 if orig_empty
-                else f"Inestabilidad o R² insuficiente ({orig_r2:.4f})."
+                else "Inestabilidad numérica en la integración SINDy."
             )
 
+            best_rescue_fit = -np.inf
             best_rescue_r2 = -np.inf
             best_rescue_tol: Optional[float] = None
             best_rescue_out: Optional[Dict[str, Any]] = None
 
-            for tol_try in (0.0005, 0.0001, 0.00005):
+            for tol_try in (0.0100, 0.0005, 0.0001, 0.00005):
                 if np.isclose(tol_try, effective_tol):
                     continue
                 cand_out = self._run_core_pass(
@@ -1572,12 +2161,27 @@ class KinetopusHeadlessPipeline:
                 cand_unstable = bool(cand_rep.get("prediction", {}).get("unstable", True))
                 cand_empty = bool(cand_rep.get("empty_r_eq", True))
 
-                if not cand_empty and not cand_unstable and cand_score > best_rescue_r2:
-                    best_rescue_r2 = cand_score
-                    best_rescue_tol = tol_try
-                    best_rescue_out = cand_out
+                if not cand_empty and not cand_unstable:
+                    cand_nominal = self.compute_nominal_smooth(
+                        raw_price=precio_raw,
+                        r_smooth=cand_out["r_smooth"],
+                        triggers=cand_out["cusum_report"]["shift_indices"],
+                        disable_returns=cfg.disable_returns,
+                    )
+                    cand_fit = self._compute_curve_price_fit(
+                        precio_raw=precio_raw,
+                        nominal_smooth=cand_nominal,
+                        act_s=int(cand_rep.get("start_idx", 0)),
+                        act_e=int(cand_rep.get("end_idx", len(precio_raw))),
+                    )
+                    cand_fit_r2 = float(cand_fit.get("window_price_r2", 0.0))
+                    if cand_fit_r2 > best_rescue_fit:
+                        best_rescue_fit = cand_fit_r2
+                        best_rescue_r2 = cand_score
+                        best_rescue_tol = tol_try
+                        best_rescue_out = cand_out
 
-            if best_rescue_out is not None and best_rescue_tol is not None and best_rescue_r2 >= 0.40:
+            if best_rescue_out is not None and best_rescue_tol is not None:
                 core_out = best_rescue_out
                 active_rep = core_out["active_report"]
                 effective_tol = float(best_rescue_tol)
@@ -1590,6 +2194,7 @@ class KinetopusHeadlessPipeline:
                     "rescued_tol": effective_tol,
                     "original_r2": round(orig_r2, 4),
                     "rescued_r2": round(float(best_rescue_r2), 4),
+                    "rescued_curve_price_r2": round(float(best_rescue_fit), 4),
                 }
             else:
                 calibration_info["autopilot_rescue"] = {
@@ -1597,7 +2202,7 @@ class KinetopusHeadlessPipeline:
                     "applied": False,
                     "reason": reason,
                     "best_candidate_r2": round(float(best_rescue_r2), 4) if np.isfinite(best_rescue_r2) else None,
-                    "note": "Ninguna tolerancia de rescate alcanzó R² >= 0.40 con física estable; proyección Monte Carlo degradada por seguridad.",
+                    "note": "Ninguna tolerancia alternativa evitó dr/dt = 0 o inestabilidad; se usará respaldo cinemático geométrico.",
                 }
 
         # Variedad nominal centrada por mínimos cuadrados (compartida entre JSON y gráficos)
@@ -1607,6 +2212,51 @@ class KinetopusHeadlessPipeline:
             triggers=core_out["cusum_report"]["shift_indices"],
             disable_returns=cfg.disable_returns,
         )
+
+        # 4b. Proyección geométrica t+H garantizada + Cono Calibrado EWMA de Integración Simple
+        pred_raw = active_rep.get("prediction", {})
+        raw_det_t = np.asarray(pred_raw.get("det_t_path", []), dtype=np.float64)
+        raw_det_prices = np.asarray(pred_raw.get("det_price_path", []), dtype=np.float64)
+        raw_unstable = bool(pred_raw.get("unstable", False))
+        raw_empty = bool(active_rep.get("empty_r_eq", False))
+
+        det_t_arr, det_prices_arr, geometric_fallback_used = self._ensure_geometric_projection(
+            last_price=float(precio_raw[-1]),
+            raw_det_t=raw_det_t,
+            raw_det_prices=raw_det_prices,
+            horizon_steps=int(cfg.horizon_steps),
+            dt_val=float(dt_val),
+            t_end=float(t[-1]),
+            r_smooth=core_out["r_smooth"],
+            r_dot=core_out["r_dot"],
+            unstable_flag=raw_unstable,
+            empty_r_eq=raw_empty,
+            disable_returns=cfg.disable_returns,
+        )
+        if isinstance(pred_raw, dict):
+            pred_raw["det_t_path"] = det_t_arr
+            pred_raw["det_price_path"] = det_prices_arr
+            if len(pred_raw.get("t_path", [])) != len(det_t_arr):
+                pred_raw["t_path"] = det_t_arr
+
+        cal_percentiles, cal_price_paths, sigma_ewma_now = (
+            self._simulate_calibrated_single_integration_cone(
+                last_price=float(precio_raw[-1]),
+                det_prices=det_prices_arr,
+                precio_raw=precio_raw,
+                log_returns=log_returns,
+                r_smooth=core_out["r_smooth"],
+                dt_val=dt_val,
+                unstable_flag=False,
+                empty_r_eq=False,
+                disable_returns=cfg.disable_returns,
+                disable_norm=cfg.disable_norm,
+                random_seed=cfg.random_seed,
+                n_paths=2000,
+            )
+        )
+        if isinstance(pred_raw, dict):
+            pred_raw["price_percentiles"] = cal_percentiles
 
         # 5. Integración Simbólica Rápida
         symbolic = SymbolicTranslator(active_rep)
@@ -1660,14 +2310,23 @@ class KinetopusHeadlessPipeline:
             )
         )
 
-        # 8. KPIs Ejecutivos, Resumen del Doble Sello y Veredicto de Confianza
+        forecast_dict["cone_model"] = "SINGLE_INTEGRATION_EWMA_LOGPRICE"
+        forecast_dict["ewma_daily_sigma"] = round(float(sigma_ewma_now), 6)
+        forecast_dict["geometric_fallback_used"] = bool(geometric_fallback_used)
+
+        # 8. KPIs Ejecutivos, Diagnóstico Geométrico Curva-Precio y Veredicto de Confianza v0.3.1
         r_dot_last = float(core_out["r_dot"][-1])
         vel_pct = r_dot_last * 100.0 if not cfg.disable_returns else r_dot_last
+        acc_pct = float(core_out["r_dot2"][-1]) * (100.0 if not cfg.disable_returns else 1.0)
         r2_val = float(active_rep.get("score", 0.0))
         tension_ratio = float(cusum_forensics["current_tension"]["tension_ratio"])
         is_unstable = bool(forecast_dict["unstable_flag"])
         empty_eq = bool(forecast_dict["empty_return_equation"])
         phys_class = wf_seal.get("asset_physics_class", "NO_EVALUADO")
+        curve_fit = geometry_dict["curve_price_fit"]
+        fit_r2 = float(curve_fit.get("window_price_r2", 0.0))
+        fit_mape = float(curve_fit.get("window_price_mape_pct", 0.0))
+        fit_label = str(curve_fit.get("fit_label", "Moderado"))
 
         double_seal = self.evaluate_double_seal(
             lb_seal=lb_seal,
@@ -1676,70 +2335,111 @@ class KinetopusHeadlessPipeline:
             tension_ratio=tension_ratio,
             is_unstable=is_unstable,
             empty_eq=empty_eq,
+            geometric_fallback_used=geometric_fallback_used,
+        )
+
+        last_price = float(precio_raw[-1])
+        win_max_price = float(np.max(precio_raw))
+        kin_dict = geometry_dict["kinematics"]
+        phs_dict = geometry_dict["phase_space"]
+
+        human_regime = self.classify_human_regime(
+            last_price=last_price,
+            window_max_price=win_max_price,
+            gap_now_pct=float(kin_dict["price_vs_spline_gap_pct"]),
+            vel_now=vel_pct,
+            acc_now=acc_pct,
+            det_prices=det_prices_arr,
+            sigma_ewma=sigma_ewma_now,
+            unstable_flag=(is_unstable and not geometric_fallback_used),
+            empty_r_eq=(empty_eq and not geometric_fallback_used),
+            disable_returns=cfg.disable_returns,
+            topology_class=str(phs_dict["topology_class"]),
+            cusum_status=str(cusum_forensics["current_tension"]["status"]),
+            seal_grade=str(double_seal["seal_grade"]),
+        )
+
+        scenarios_dict = self._compute_probabilistic_scenarios(
+            last_price=last_price,
+            nominal_smooth_now=float(nominal_smooth[-1]),
+            det_prices=det_prices_arr,
+            mc_percentiles=cal_percentiles,
+            price_paths=cal_price_paths,
+            horizon_steps=int(cfg.horizon_steps),
         )
 
         confidence_reasons: List[str] = []
-        if is_unstable:
+        if (is_unstable or empty_eq) and not geometric_fallback_used and len(det_prices_arr) == 0:
             confidence_tier = "NULA_O_DEGRADADA"
-            confidence_reasons.append("El régimen vigente activó el Kill-Switch de estabilidad física.")
+            confidence_reasons.append("No se pudo construir trayectoria proyectada estable en esta ventana.")
         else:
             score_pts = 0
-            if r2_val >= 0.70:
-                score_pts += 2
-                confidence_reasons.append(f"Ajuste SINDy fuerte (R²={r2_val:.3f}).")
-            elif r2_val >= 0.45:
-                score_pts += 1
-                confidence_reasons.append(f"Ajuste SINDy moderado (R²={r2_val:.3f}).")
-            else:
-                confidence_reasons.append(f"Ajuste SINDy ruidoso (R²={r2_val:.3f}).")
-
-            if phys_class == "COHERENTE_INERCIAL":
+            if fit_r2 >= 0.85:
                 score_pts += 2
                 confidence_reasons.append(
-                    f"Activo físicamente coherente en Walk-Forward ({wf_seal.get('consensus_hit_ratio_pct')}% HR OOS en {wf_seal.get('effective_cuts')} cortes)."
+                    f"Ajuste geométrico Curva-Precio fuerte (R²={fit_r2:.3f}, MAPE={fit_mape:.2f}%)."
+                )
+            elif fit_r2 >= 0.65:
+                score_pts += 1
+                confidence_reasons.append(
+                    f"Ajuste geométrico Curva-Precio moderado (R²={fit_r2:.3f}, MAPE={fit_mape:.2f}%)."
+                )
+            else:
+                confidence_reasons.append(
+                    f"Ajuste geométrico Curva-Precio amplio (R²={fit_r2:.3f}, MAPE={fit_mape:.2f}%)."
+                )
+
+            if geometric_fallback_used:
+                score_pts -= 1
+                confidence_reasons.append(
+                    "SINDy recurrió a respaldo cinemático amortiguado por inestabilidad o dr/dt=0."
+                )
+
+            if phys_class == "NO_EVALUADO":
+                confidence_reasons.append(
+                    "Enfoque geométrico puro v0.3.1 (Walk-Forward OOS omitido; usar --audit-oos para auditoría retrospectiva)."
+                )
+            elif phys_class == "COHERENTE_INERCIAL":
+                score_pts += 2
+                confidence_reasons.append(
+                    f"Auditoría --audit-oos coherente ({wf_seal.get('consensus_hit_ratio_pct')}% HR OOS en {wf_seal.get('effective_cuts')} cortes)."
                 )
             elif phys_class == "TRANSICIONAL_BORDE":
                 score_pts += 1
                 confidence_reasons.append(
-                    f"Coherencia OOS intermedia ({wf_seal.get('consensus_hit_ratio_pct')}% HR en {wf_seal.get('effective_cuts')} cortes)."
+                    f"Auditoría --audit-oos intermedia ({wf_seal.get('consensus_hit_ratio_pct')}% HR en {wf_seal.get('effective_cuts')} cortes)."
                 )
             elif phys_class == "INSUFICIENTE":
-                score_pts -= 2
                 confidence_reasons.append(
-                    f"Sello OOS INSUFICIENTE ({wf_seal.get('effective_cuts', 0)}/{wf_seal.get('min_required_effective_cuts', 5)} cortes efectivos de ventana completa)."
+                    f"Auditoría --audit-oos con cortes insuficientes ({wf_seal.get('effective_cuts', 0)}/{wf_seal.get('min_required_effective_cuts', 5)})."
                 )
             elif phys_class in ("EXOGENO_FUNDAMENTALISTA", "INESTABLE_O_RUIDO_EXTREMO"):
-                score_pts -= 2
+                score_pts -= 1
                 confidence_reasons.append(
-                    f"Alerta Caso GLD / Exógeno: Walk-Forward OOS reprobado ({wf_seal.get('consensus_hit_ratio_pct', 0.0)}% HR)."
+                    f"Auditoría --audit-oos exógena ({wf_seal.get('consensus_hit_ratio_pct', 0.0)}% HR)."
                 )
 
             if tension_ratio > 0.85:
                 score_pts -= 1
                 confidence_reasons.append(
-                    f"Tensión CUSUM crítica ({tension_ratio:.0%} del umbral H): alto riesgo de cambio inminente de régimen."
+                    f"Tensión CUSUM crítica ({tension_ratio:.0%} del umbral H): alto riesgo de giro cercano."
                 )
             elif tension_ratio <= 0.50:
                 score_pts += 1
                 confidence_reasons.append(f"Régimen CUSUM destensado ({tension_ratio:.0%} de H).")
 
-            if not double_seal["seal_passed"]:
-                confidence_tier = "BAJA_CAUTELA"
-            elif double_seal["seal_grade"] == "APROBADO_CONDICIONAL":
-                confidence_tier = "MEDIA" if score_pts >= 2 else "BAJA_CAUTELA"
-            elif score_pts >= 4:
+            if score_pts >= 3:
                 confidence_tier = "ALTA"
-            elif score_pts >= 2:
+            elif score_pts >= 1:
                 confidence_tier = "MEDIA"
             else:
                 confidence_tier = "BAJA_CAUTELA"
 
         total_ms = (time.perf_counter() - t0_wall) * 1000.0
-        last_price = float(precio_raw[-1])
 
         telemetry: Dict[str, Any] = {
             "metadata": {
-                "engine": "KineTopus Headless Engine v2.2",
+                "engine": "KineTopus Headless Engine v3.1",
                 "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "total_runtime_ms": round(total_ms, 2),
                 "config": asdict(cfg),
@@ -1752,18 +2452,23 @@ class KinetopusHeadlessPipeline:
                     "last_candle_date": dates_active[-1] if dates_active else None,
                     "last_close_price": round(last_price, 4),
                     "window_min_price": round(float(np.min(precio_raw)), 4),
-                    "window_max_price": round(float(np.max(precio_raw)), 4),
+                    "window_max_price": round(win_max_price, 4),
                 },
             },
             "calibration": calibration_info,
+            "human_regime": human_regime,
+            "scenarios": scenarios_dict,
             "executive_kpis": {
-                "directional_inertia": "ALCISTA (Long)" if r_dot_last > 0 else "BAJISTA (Short)",
+                "directional_inertia": "ALCISTA (Long)" if float(det_prices_arr[-1] - last_price) > 0 or (abs(det_prices_arr[-1] - last_price) < 1e-9 and r_dot_last > 0) else "BAJISTA (Short)",
                 "instant_velocity_pct_per_candle": round(vel_pct, 4),
                 "active_regime_number": int(len(core_out["regime_reports"]) or 1),
                 "active_regime_duration_candles": int(cusum_forensics["active_regime_candles"]),
+                "curve_price_r2": round(fit_r2, 4),
+                "curve_price_mape_pct": round(fit_mape, 3),
+                "curve_price_quality": fit_label,
                 "sindy_r2_score": round(r2_val, 4),
                 "sindy_r2_quality": (
-                    "Excelente" if r2_val > 0.8 else ("Aceptable" if r2_val > 0.5 else "Ruidoso")
+                    "Excelente" if r2_val > 0.8 else ("Aceptable" if r2_val > 0.5 else "Informativo")
                 ),
                 "cusum_semaphore": cusum_forensics["current_tension"]["status"],
                 "cusum_tension_vs_h": f"{cusum_forensics['current_tension']['max_tension']:.2f} / {cfg.cusum_h:.1f}",
