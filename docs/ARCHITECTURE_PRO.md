@@ -1,4 +1,4 @@
-# ARQUITECTURA OPEN-CORE — KINETOPUS-PRO (`v0.3.1` · Enfoque Geométrico Puro)
+# ARQUITECTURA OPEN-CORE — KINETOPUS-PRO (`v0.4.0` · Geometría Pura + Servicio & Indicador Portable)
 
 ## 1. Frontera de Desacoplamiento (`engine_bridge.py`) y Propiedad del Repositorio
 `KineTopus-Analyst` (`kinetopus_pro`) consume el motor científico `kinetopus-engine` exclusivamente a través de `kinetopus_pro/engine_bridge.py`, manteniendo el repositorio base 100% intacto:
@@ -52,4 +52,17 @@ Cada lente ejecuta de forma causal (*zero look-ahead*) hasta `horizon_steps = 15
    - Genera **3 dashboards técnicos de 6 paneles** (`2000v / 1000v / 500v`) y **18 paneles individuales** en español humano sin enums crudos, con los Paneles 1 y 2 libres de barreras CUSUM horizontales de 1 vela y `t+150` activo en las 3 escalas (conservando el forense histórico CUSUM completo en el Panel 6 y Sección 2.5).
 2. **Historial 100% Offline y Flujo en Dos Etapas (`report_builder.py` + `templates/report.html.j2`):**
    - **Etapa 1 (`--ticker` / `--csv`):** Persiste `report_bundle.npz` con **el 100% del historial descargado** (`h_start=0`) y las 3 trayectorias/conos completos, crea `narrative_template.json`, y ensambla `report.html` autocontenido (`plotly.min.js`, vista inicial `500v + t+150`, botones `[120v | 500v | 1000v | 2000v | Todo el historial]`, selector `[Cono: 1000v | 2000v | 500v | Sin cono]`, auto-escalado Y limpio, interruptor Oscuro/Claro y selector de los **3 dashboards técnicos** en la Pestaña 3) junto con `analysis.md` en modo cuantitativo puro.
-   - **Etapa 2 (`--render-report <DIR>`):** Fusiona el texto cualitativo de `narrative.json` con el 100% de cifras del motor en `< 0.5 s`, actualizando `report.html`, `analysis.md` y copiando en `--artifact-dir` `hero.png`, los **3 dashboards** (`2000v`, `1000v`, `500v`), `report.html` y el Markdown listo para artefactos.
+   - **Etapa 2 (`--render-report <DIR>`):** Fusiona el texto cualitativo de `narrative.json` con el 100% de cifras del motor en `< 0.5 s`, actualizando `report.html`, `analysis.md`, `indicator_feed.json`, `widget.html`, `indicator.pine` y `alerts.json`, y copiando en `--artifact-dir` `hero.png`, los **3 dashboards** (`2000v`, `1000v`, `500v`), `report.html`, `widget.html` y el Markdown listo para artefactos.
+
+---
+
+## 5. Capa de Servicio B2B, Indicador Portable y Alertas Activas (`v0.4.0` — Hito 4)
+1. **Exportador B2B y Widget SVG `< 35 KB` (`kinetopus_pro/indicator_export.py` + `templates/widget.html.j2`):**
+   - `indicator_feed.json` (`schema_version = "kinetopus.indicator.v1"`, `~5–12 KB`): contrato JSON compacto con las 3 lentes, escenarios `P25/P75`, pines tácticos `500v` y series muestreadas (`120v` cola + `t+150` cada `5` pasos).
+   - `widget.html` (`< 35 KB`, cero `plotly.min.js`): gráfico vectorial SVG puro con Tema Oscuro/Claro (`?theme=light|dark`), cortes limpios CUSUM, cono `P25–P75` y etiquetas anti-colisión listo para `<iframe>` en portales externos.
+   - `indicator.pine`: código **TradingView Pine Script v5** (`overlay=true`) con curvas vigentes `2000v/1000v/500v`, proyecciones `t+150`, corredor `P25–P75` y HUD `table.new`.
+2. **Motor de Alertas Activas y Deduplicación (`kinetopus_pro/alerts.py`):**
+   - Evalúa 6 reglas deterministas (`CUSUM_CRITICAL_TENSION`, `RECENT_CUSUM_BREAK`, `TACTICAL_500V_PIN`, `MULTI_LENS_DIVERGENCE`, `CURVE_EXTREME_STRETCH`, `REGIME_STATE_TRANSITION`), deduplica huellas SHA-256 en `reports/.alerts_ledger.json` y despacha webhooks HTTP POST JSON opcionales (`--webhook-url`, `urllib.request` stdlib).
+3. **Micro-Servicio HTTP (`FastAPI` + Portal Web) y Servidor MCP (`service.py`, `mcp_server.py`):**
+   - `kinetopus-serve`: expone `GET /` (`templates/portal.html.j2`), `/api/v1/health` (con gancho `hito3_scanner_attached`), `/api/v1/tickers`, `POST /api/v1/analyze` (serializado bajo `threading.Lock` para proteger la regla de `16 GB` RAM), `/api/v1/indicator/{ticker}`, `/api/v1/pine/{ticker}`, `/api/v1/alerts`, `/reports/{ticker}/widget` y `/reports/{ticker}/latest`.
+   - `kinetopus-mcp`: servidor MCP `stdio` (`FastMCP`) con `list_analyzed_assets`, `get_asset_indicator`, `get_asset_alerts` y `get_tradingview_pine`.

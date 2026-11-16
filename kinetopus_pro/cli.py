@@ -29,8 +29,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-import pandas as pd
-
 warnings.filterwarnings("ignore", category=UserWarning)
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -40,11 +38,7 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-
-from kinetopus_pro.headless_pipeline import KinetopusAnalysisConfig, KinetopusHeadlessPipeline
-from kinetopus_pro.multi_lens import DEFAULT_MULTI_LENSES, KinetopusMultiLensRunner, MultiLensConfig
-from kinetopus_pro.report_builder import KinetopusReportBuilder
-from kinetopus_pro.static_renderer import KinetopusStaticRenderer
+DEFAULT_MULTI_LENSES = (2000, 1000, 500)
 
 
 def sanitize_ticker_folder(raw_name: str) -> str:
@@ -118,10 +112,22 @@ def parse_args() -> argparse.Namespace:
         help="Etapa 2: Ruta a un directorio de corrida existente para re-renderizar report.html y analysis.md con narrative.json.",
     )
     parser.add_argument(
+        "--export-portable",
+        type=str,
+        default=None,
+        help="Hito 4: Genera/actualiza indicator_feed.json, widget.html, indicator.pine y alerts.json sobre una corrida existente (<0.2 s).",
+    )
+    parser.add_argument(
+        "--webhook-url",
+        type=str,
+        default=None,
+        help="Hito 4: URL opcional para despachar alertas nuevas vía HTTP POST JSON.",
+    )
+    parser.add_argument(
         "--artifact-dir",
         type=str,
         default=None,
-        help="Directorio opcional donde copiar hero.png, los 3 dashboards (2000v/1000v/500v), report.html y el Markdown con rutas absolutas.",
+        help="Directorio opcional donde copiar hero.png, los 3 dashboards (2000v/1000v/500v), report.html, widget.html y el Markdown con rutas absolutas.",
     )
     parser.add_argument(
         "--artifact-slug",
@@ -132,7 +138,41 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _run_export_portable_mode(args: argparse.Namespace) -> int:
+    from kinetopus_pro.alerts import KinetopusAlertEngine
+    from kinetopus_pro.indicator_export import KinetopusIndicatorExporter
+
+    rep_dir = Path(args.export_portable).resolve()
+    if not rep_dir.is_dir():
+        print(f"[ERROR] No existe el directorio de reporte: {rep_dir}", file=sys.stderr)
+        return 1
+    alerts_payload = KinetopusAlertEngine.evaluate_directory(
+        report_dir=rep_dir,
+        webhook_url=args.webhook_url,
+    )
+    exported = KinetopusIndicatorExporter.export_from_directory(
+        report_dir=rep_dir,
+        alerts_payload=alerts_payload,
+    )
+    out_summary = {
+        "status": "OK",
+        "mode": "export_portable_hito4",
+        "report_dir": str(rep_dir),
+        "ticker": alerts_payload["ticker"],
+        "last_date": alerts_payload["last_date"],
+        "total_active_alerts": alerts_payload["total_active_alerts"],
+        "new_alerts_count": alerts_payload["new_alerts_count"],
+        "highest_severity": alerts_payload["highest_severity"],
+        "alerts_json": str(rep_dir / "alerts.json"),
+        **exported,
+    }
+    print(json.dumps(out_summary, indent=2, ensure_ascii=False))
+    return 0
+
+
 def _run_render_stage2_mode(args: argparse.Namespace) -> int:
+    from kinetopus_pro.report_builder import KinetopusReportBuilder
+
     rep_dir = Path(args.render_report).resolve()
     if not rep_dir.is_dir():
         print(f"[ERROR] No existe el directorio de reporte: {rep_dir}", file=sys.stderr)
@@ -142,6 +182,7 @@ def _run_render_stage2_mode(args: argparse.Namespace) -> int:
         report_dir=rep_dir,
         artifact_dir=art_dir,
         artifact_slug=args.artifact_slug,
+        webhook_url=args.webhook_url,
     )
     out_summary = {
         "status": "OK",
@@ -154,6 +195,9 @@ def _run_render_stage2_mode(args: argparse.Namespace) -> int:
 
 
 def _run_single_lens_mode(args: argparse.Namespace, ticker_label: str, df_override: Any, out_dir: Path) -> int:
+    from kinetopus_pro.headless_pipeline import KinetopusAnalysisConfig, KinetopusHeadlessPipeline
+    from kinetopus_pro.static_renderer import KinetopusStaticRenderer
+
     audit_oos = bool(args.audit_oos or args.wf_cuts > 0)
     cfg = KinetopusAnalysisConfig(
         ticker=ticker_label,
@@ -234,8 +278,17 @@ def _run_single_lens_mode(args: argparse.Namespace, ticker_label: str, df_overri
 def main() -> int:
     args = parse_args()
 
+    if args.export_portable:
+        return _run_export_portable_mode(args)
+
     if args.render_report:
         return _run_render_stage2_mode(args)
+
+    import pandas as pd
+
+    from kinetopus_pro.multi_lens import KinetopusMultiLensRunner, MultiLensConfig
+    from kinetopus_pro.report_builder import KinetopusReportBuilder
+    from kinetopus_pro.static_renderer import KinetopusStaticRenderer
 
     df_override = None
     ticker_label = args.ticker
@@ -341,6 +394,10 @@ def main() -> int:
         "narrative_template_json": str(nav_tpl_path),
         "report_html": str(out_dir / "report.html"),
         "analysis_md": str(out_dir / "analysis.md"),
+        "indicator_feed_json": str(out_dir / "indicator_feed.json"),
+        "widget_html": str(out_dir / "widget.html"),
+        "indicator_pine": str(out_dir / "indicator.pine"),
+        "alerts_json": str(out_dir / "alerts.json"),
         "lenses": lens_artifacts,
     }
 
@@ -352,6 +409,7 @@ def main() -> int:
         report_dir=out_dir,
         artifact_dir=art_dir,
         artifact_slug=args.artifact_slug,
+        webhook_url=args.webhook_url,
     )
 
     ds = multi_res.confluence["metadata"]["dataset"]
@@ -376,6 +434,10 @@ def main() -> int:
         "narrative_template_json": str(nav_tpl_path),
         "report_html": rendered_docs["report_html"],
         "analysis_md": rendered_docs["analysis_md"],
+        "indicator_feed_json": rendered_docs["indicator_feed_json"],
+        "widget_html": rendered_docs["widget_html"],
+        "indicator_pine": rendered_docs["indicator_pine"],
+        "alerts_json": rendered_docs["alerts_json"],
         "telemetry_json": str(conf_json_path),
         "dashboard_png": str(hero_png_path),
         "lenses": lens_artifacts,

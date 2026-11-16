@@ -16,6 +16,7 @@ Implementa el enfoque geométrico puro multi-lente en dos etapas:
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import re
 import shutil
@@ -24,9 +25,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import jinja2
 import numpy as np
-import plotly.offline
 
-from kinetopus_pro.headless_pipeline import KinetopusHeadlessPipeline
+from kinetopus_pro.alerts import KinetopusAlertEngine
+from kinetopus_pro.indicator_export import KinetopusIndicatorExporter
 
 
 class KinetopusReportBuilder:
@@ -38,6 +39,14 @@ class KinetopusReportBuilder:
     @classmethod
     def _get_plotly_js(cls) -> str:
         if cls._CACHED_PLOTLY_JS is None:
+            spec = importlib.util.find_spec("plotly")
+            if spec and spec.origin:
+                js_path = Path(spec.origin).resolve().parent / "package_data" / "plotly.min.js"
+                if js_path.is_file():
+                    cls._CACHED_PLOTLY_JS = js_path.read_text(encoding="utf-8")
+                    return cls._CACHED_PLOTLY_JS
+            import plotly.offline
+
             cls._CACHED_PLOTLY_JS = plotly.offline.get_plotlyjs()
         return cls._CACHED_PLOTLY_JS
 
@@ -1532,6 +1541,7 @@ class KinetopusReportBuilder:
         report_dir: Path,
         artifact_dir: Optional[Path] = None,
         artifact_slug: Optional[str] = None,
+        webhook_url: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         Renderiza `<report_dir>/report.html` y `<report_dir>/analysis.md` leyendo únicamente
@@ -1676,10 +1686,21 @@ class KinetopusReportBuilder:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_out)
 
+        alerts_payload = KinetopusAlertEngine.evaluate_directory(
+            report_dir=report_dir,
+            webhook_url=webhook_url,
+        )
+        portable_paths = KinetopusIndicatorExporter.export_from_directory(
+            report_dir=report_dir,
+            alerts_payload=alerts_payload,
+        )
+
         result_paths: Dict[str, str] = {
             "narrative_stage": stage_label,
             "report_html": str(html_path),
             "analysis_md": str(md_path),
+            "alerts_json": str(report_dir / "alerts.json"),
+            **portable_paths,
         }
 
         if artifact_dir is not None:
@@ -1704,6 +1725,11 @@ class KinetopusReportBuilder:
 
             html_dst = art_dir / f"{slug}_report.html"
             shutil.copy2(html_path, html_dst)
+
+            widget_src = Path(portable_paths["widget_html"])
+            widget_dst = art_dir / f"{slug}_widget.html"
+            if widget_src.is_file():
+                shutil.copy2(widget_src, widget_dst)
 
             hero_abs_str = "/" + str(hero_dst).replace("\\", "/").lstrip("/")
             dash_1000_abs = (
@@ -1742,6 +1768,7 @@ class KinetopusReportBuilder:
                     "artifact_dashboard_2000_png": str(copied_dashes.get(ctx_win, "")),
                     "artifact_dashboard_500_png": str(copied_dashes.get(sen_win, "")),
                     "artifact_report_html": str(html_dst),
+                    "artifact_widget_html": str(widget_dst),
                     "artifact_staged_md": str(md_art_dst),
                 }
             )

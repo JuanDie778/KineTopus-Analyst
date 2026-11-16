@@ -34,15 +34,15 @@
 
 ---
 
-## Hito 3: Escáner Multi-Activo y Multi-Serie (`v0.4.0`)
-**Estado:** 📋 PLANIFICADO
+## Hito 3: Escáner Multi-Activo y Multi-Serie (`v0.5.0`)
+**Estado:** 📋 PLANIFICADO (Siguiente frente)
 - **Radar Práctico y Motor de Barrido Transversal:** Soportar lotes mixtos de tickers de *Yahoo Finance* (Acciones, ETFs, Índices, FX, Cripto) y archivos CSV locales (incluidos pares acoplados `(X, Y)` no financieros bajo `--classic-price` que puedan contener ceros o valores negativos).
-- **Tabla Maestra Determinista (`JSON` / `CSV`) y Síntesis Ejecutiva:** Consolidar para cada serie el estado humano de las 3 lentes (`2000v / 1000v / 500v`), brechas precio-curva `%`, ajuste Curva-Precio (`R²`, `MAPE`), proyecciones simultáneas `t+150`, arquetipo/autovalores SINDy + sentido de giro orbital, y fechas/scores de quiebres o picos históricos CUSUM (incorporando cobertura y métricas OOS cuando se active `--audit-oos`), cuidando descarga/caché eficiente y ejecución paralela segura dentro de la Regla de 16 GB RAM.
+- **Tabla Maestra Determinista (`JSON` / `CSV`) y Síntesis Ejecutiva:** Consolidar para cada serie el estado humano de las 3 lentes (`2000v / 1000v / 500v`), brechas precio-curva `%`, ajuste Curva-Precio (`R²`, `MAPE`), proyecciones simultáneas `t+150`, arquetipo/autovalores SINDy + sentido de giro orbital, y fechas/scores de quiebres o picos históricos CUSUM (incorporando cobertura y métricas OOS cuando se active `--audit-oos`), conectándose directamente al endpoint preparado en Hito 4 (`hito3_scanner_attached`).
 
 ---
 
-## Hito 4: Empaquetado de Servicio, API e Indicador Portable
-**Estado:** 📋 IDEACIÓN
-- **Consumo Directo (Analistas / Público General):** Reportes interactivos `report.html` autocontenidos y flujo *plug-and-play* de baja fricción (CLI, Skill/MCP o interfaz web ligera).
-- **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Endpoints/feeds JSON portables (`confluence.json` y salidas del Escáner Multi-Serie), indicador estructurado de régimen/curvas multi-escala y widgets embebibles ligeros.
-- **Alertas Activas:** Servicio de notificaciones automáticas ante quiebres de umbral CUSUM ($H$), pines tácticos del pulso `500v` y transiciones de régimen o divergencia entre las 3 lentes (`2000v / 1000v / 500v`).
+## Hito 4: Empaquetado de Servicio, API, Indicador Portable y Alertas Activas
+**Estado:** ✅ COMPLETADO (`v0.4.0`)
+- **Consumo Directo (Analistas / Público General):** Portal Web Ligero (`GET /` en `kinetopus-serve`, Oscuro/Claro), reportes interactivos `report.html` autocontenidos y servidor MCP `stdio` (`kinetopus-mcp`) para agentes.
+- **Integración B2B (Plataformas como *TradingView* / *Investing.com*):** Contrato ligero `indicator_feed.json` (`kinetopus.indicator.v1`, `~5–12 KB`), widget vectorial embebible `widget.html` (`< 35 KB` SVG puro para `<iframe>`), overlay **TradingView Pine Script v5** (`indicator.pine`) y endpoints HTTP `FastAPI` protegidos con `threading.Lock` ($\le 16\text{ GB}$ RAM).
+- **Alertas Activas (`alerts.py`):** 6 reglas físico-geométricas deterministas sobre `confluence.json`, ledger de deduplicación SHA-256 (`reports/.alerts_ledger.json`) y despacho saliente opcional vía HTTP POST JSON (`--webhook-url`).

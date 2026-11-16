@@ -22,8 +22,8 @@ Run the Multi-Lens CLI (`10y` download with automatic `max` fallback when `10y <
 
 * For a local CSV file: replace `--ticker` with `--csv "<PATH>"` (add `--classic-price --disable-norm` only for idealized classical physics datasets).
 * Pass `--audit-oos` only when the user explicitly requests historical Walk-Forward OOS scoring.
-* Capture the JSON summary printed to `stdout`: `report_dir`, `confluence_json`, `hero_png`, `report_html`, `analysis_md`, `narrative_template_json`, and `lenses` (`2000`, `1000`, `500`).
-* Note: Stage 1 already produces a valid standalone `report.html` and `analysis.md` in `cuantitativo` mode even without AI intervention.
+* Capture the JSON summary printed to `stdout`: `report_dir`, `confluence_json`, `hero_png`, `report_html`, `analysis_md`, `indicator_feed_json`, `widget_html`, `indicator_pine`, `alerts_json`, `narrative_template_json`, and `lenses` (`2000`, `1000`, `500`).
+* Note: Stage 1 already produces a valid standalone `report.html`, `analysis.md`, portable B2B outputs (`indicator_feed.json`, `< 35 KB` `widget.html`, TradingView `indicator.pine`), and `alerts.json` in `cuantitativo` mode even without AI intervention. To refresh portable/alert files on an older directory in `< 0.2 s`, run `--export-portable "<REPORT_DIR>"`.
 
 ## Step 2: Mandatory Quantitative & Visual Audit + Web Research
 

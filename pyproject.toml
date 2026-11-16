@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kinetopus-pro"
-version = "0.3.1"
-description = "KineTopus-Pro: Pure Geometric Multi-Lens Regime Radar, Simultaneous 3-Lens t+150 Projections, Calibrated Cones & Interactive HTML/Markdown Analyst Suite"
+version = "0.4.0"
+description = "KineTopus-Pro: Pure Geometric Multi-Lens Regime Radar, Portable B2B Indicator Feed, <35 KB SVG Widget, Pine Script v5, Active Alerts & FastAPI/MCP Service"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Proprietary - All Rights Reserved" }
@@ -18,9 +18,18 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+service = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+    "pydantic>=2.0.0",
+    "httpx>=0.26.0",
+    "mcp>=1.0.0",
+]
 
 [project.scripts]
 kinetopus-analyze = "kinetopus_pro.cli:main"
+kinetopus-serve = "kinetopus_pro.service:main"
+kinetopus-mcp = "kinetopus_pro.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
