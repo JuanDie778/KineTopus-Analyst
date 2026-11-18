@@ -1,0 +1,475 @@
+{
+  "project": "kinetopus_la_segunda_dimension_del_dinero",
+  "title": "La Segunda Dimensión del Dinero: Qué Ve un Microscopio Físico en los Mercados",
+  "aesthetic": "Apple Keynote Minimalism x 3Blue1Brown Geometric Rigor x Veritasium Narrative Intrigue",
+  "voice": "es-CO-GonzaloNeural",
+  "rate": "+0%",
+  "fps": 60,
+  "sample_rate_hz": 48000,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "safe_zone": {
+    "bottom_margin_pct": 14.0,
+    "manim_min_y": -2.85,
+    "max_words_per_label": 6
+  },
+  "palette": {
+    "bg_dark": "#090D16",
+    "bg_card": "#0F1625",
+    "border_subtle": "#22314C",
+    "text_main": "#F4F6FB",
+    "text_sub": "#9FB0CB",
+    "cyan_ccw": "#38BDF8",
+    "coral_cw_tension": "#FB7185",
+    "emerald_stable": "#34D399",
+    "amber_now": "#FBBF24",
+    "slate_1d_blind": "#64748B"
+  },
+  "total_speech_s": 328.44,
+  "total_duration_s": 340.0,
+  "total_frames_60fps": 20400,
+  "scenes": [
+    {
+      "id": "s01_la_ilusion_de_la_sombra",
+      "act": "Acto 1 · El Engaño Plano",
+      "chapter_title": "La ilusión de la sombra 1D",
+      "title": "Dos Curvas Gemelas, Dos Giros Opuestos",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#anim_01",
+      "narration_display": "Mira estas dos curvas reales del mercado. El S&P 500 sube un 25%. Bitcoin sube un 29%. Abajo, su volumen acumulado parece casi idéntico. En cualquier pantalla de bolsa de los últimos sesenta años, contarían la misma historia. Pero si giramos la cámara hacia una dimensión oculta. Aparece esto. Están girando en sentidos opuestos.",
+      "narration_tts": "Mira estas dos curvas reales del mercado. El ese pe quinientos sube un veinticinco por ciento. Bitcoin sube un veintinueve por ciento. Abajo, su volumen acumulado parece casi idéntico. En cualquier pantalla de bolsa de los últimos sesenta años, contarían la misma historia. Pero si giramos la cámara hacia una dimensión oculta. Aparece esto. Están girando en sentidos opuestos.",
+      "pause_after_s": 0.85,
+      "on_screen_text": {
+        "headline": "La ilusión de la sombra 1D",
+        "left_badge": "S&P 500 · Giro antihorario ↺",
+        "right_badge": "Bitcoin · Giro horario ↻"
+      },
+      "visual_direction": "Cold open sobre negro #090D16. Dos tarjetas limpias muestran precio y OBV gris pizarra casi gemelos. En 'giramos', los ejes rotan y despliegan dos órbitas 2D luminosas con flechas opuestas (cian ↺ vs coral ↻).",
+      "sync_cues": [
+        "veinticinco",
+        "veintinueve",
+        "acumulado",
+        "giramos",
+        "aparece",
+        "opuestos"
+      ],
+      "resolved_cues_s": {
+        "veinticinco": 4.2,
+        "veintinueve": 7.0875,
+        "acumulado": 10.3375,
+        "giramos": 18.5375,
+        "aparece": 21.5125,
+        "opuestos": 24.4625
+      },
+      "audio_wav": "audio/wav48/s01_la_ilusion_de_la_sombra.wav",
+      "words_json": "audio/raw/s01_la_ilusion_de_la_sombra_words.json",
+      "speech_duration_s": 25.992,
+      "scene_duration_s": 26.8667,
+      "target_frames_60fps": 1612,
+      "target_frames_15fps": 403
+    },
+    {
+      "id": "s02_galileo_y_el_microscopio",
+      "act": "Acto 1 · El Engaño Plano",
+      "chapter_title": "De Galileo al microscopio KineTopus",
+      "title": "De la Piedra de Galileo a KineTopus",
+      "rate": "+0%",
+      "data_source": "render_visuals_curiosos.py#build_anim_00_galileo_spline",
+      "narration_display": "¿Por qué nadie veía ese giro? Imagina grabar a pulso una piedra cayendo desde un balcón. Si restas un fotograma menos el anterior, el temblor de tu mano destruye la física en dientes de sierra. Pero si trazas primero una curva continua que limpie el pulso sin mirar jamás el futuro, emerge intacta una ley exacta. 9.8 m/s². Con esa misma matemática construí KineTopus. Un microscopio físico para mercados.",
+      "narration_tts": "¿Por qué nadie veía ese giro? Imagina grabar a pulso una piedra cayendo desde un balcón. Si restas un fotograma menos el anterior, el temblor de tu mano destruye la física en dientes de sierra. Pero si trazas primero una curva continua que limpie el pulso sin mirar jamás el futuro, emerge intacta una ley exacta. Nueve punto ocho metros por segundo al cuadrado. Con esa misma matemática construí KineTópus. Un microscopio físico para mercados.",
+      "pause_after_s": 0.75,
+      "on_screen_text": {
+        "headline": "Limpiar el ruido revela la ley",
+        "left_badge": "Resta cruda · Puro ruido",
+        "right_badge": "Spline continuo · 9.8 m/s²"
+      },
+      "visual_direction": "Esfera luminosa cae 20 m con retícula vibrante dejando puntos blancos ruidosos. A la derecha estallan picos coral de velocidad cruda; un spline cian barre los puntos y revela la recta esmeralda de 9.8 m/s².",
+      "sync_cues": [
+        "piedra",
+        "dientes",
+        "curva",
+        "nueve",
+        "KineTopus"
+      ],
+      "resolved_cues_s": {
+        "piedra": 3.625,
+        "dientes": 10.225,
+        "curva": 13.175,
+        "nueve": 18.6375,
+        "KineTopus": 23.4
+      },
+      "audio_wav": "audio/wav48/s02_galileo_y_el_microscopio.wav",
+      "words_json": "audio/raw/s02_galileo_y_el_microscopio_words.json",
+      "speech_duration_s": 27.888,
+      "scene_duration_s": 28.6667,
+      "target_frames_60fps": 1720,
+      "target_frames_15fps": 430
+    },
+    {
+      "id": "s03_las_cuatro_estaciones",
+      "act": "Acto 1 · El Engaño Plano",
+      "chapter_title": "Las cuatro estaciones del plano 2D",
+      "title": "Las Cuatro Estaciones del Plano 2D",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#guide_ilus_00",
+      "narration_display": "En lugar de aplastar datos contra el reloj, KineTopus enfrenta el volumen normalizado contra la velocidad del precio. La línea plana se abre en una órbita viva con cuatro estaciones. Primero entra volumen silencioso abajo. Luego el precio acelera. Después el volumen se retira arriba. Y al final, el mercado descansa. Cuando gira en sentido antihorario, el capital paciente compra antes del titular. Cuando gira en sentido horario, el precio salta primero. Y la multitud corre detrás.",
+      "narration_tts": "En lugar de aplastar datos contra el reloj, KineTópus enfrenta el volumen normalizado contra la velocidad del precio. La línea plana se abre en una órbita viva con cuatro estaciones. Primero entra volumen silencioso abajo. Luego el precio acelera. Después el volumen se retira arriba. Y al final, el mercado descansa. Cuando gira en sentido antihorario, el capital paciente compra antes del titular. Cuando gira en sentido horario, el precio salta primero. Y la multitud corre detrás.",
+      "pause_after_s": 0.8,
+      "on_screen_text": {
+        "headline": "Anatomía de un atractor 2D",
+        "quadrants": [
+          "1 · Volumen silencioso",
+          "2 · Precio acelera",
+          "3 · Volumen cae",
+          "4 · Mercado descansa"
+        ],
+        "left_rule": "↺ Volumen antecede al precio",
+        "right_rule": "↻ Precio salta primero"
+      },
+      "visual_direction": "La curva 1D de SPY se pliega y despliega en el cronógrafo 2D (Vz vs r %). Un cometa recorre los 4 cuadrantes iluminando cada estación al compás exacto de la voz, cerrando con el contraste cian ↺ vs coral ↻.",
+      "sync_cues": [
+        "abre",
+        "silencioso",
+        "acelera",
+        "retira",
+        "descansa",
+        "antihorario",
+        "sentido horario"
+      ],
+      "resolved_cues_s": {
+        "abre": 7.5875,
+        "silencioso": 11.575,
+        "acelera": 14.025,
+        "retira": 16.4125,
+        "descansa": 19.45,
+        "antihorario": 21.775,
+        "sentido horario": 26.325
+      },
+      "audio_wav": "audio/wav48/s03_las_cuatro_estaciones.wav",
+      "words_json": "audio/raw/s03_las_cuatro_estaciones_words.json",
+      "speech_duration_s": 31.896,
+      "scene_duration_s": 32.7333,
+      "target_frames_60fps": 1964,
+      "target_frames_15fps": 491
+    },
+    {
+      "id": "s04_la_huella_del_capital",
+      "act": "Acto 2 · Quién Empuja a Quién",
+      "chapter_title": "26,294 cortes y el caso Oro / Tesla",
+      "title": "26,294 Instantáneas y la Paradoja de Oro y Tesla",
+      "rate": "+0%",
+      "data_source": "reports/_gran_estudio_v3_ventaja_competitiva/swarm_outputs/duel_lab/tables_duel",
+      "narration_display": "Medí este pulso en 26,294 instantáneas reales durante veintiséis años. Emergió una señal 99.9% independiente de indicadores clásicos como OBV o CMF. El S&P 500 y el Nasdaq giran en sentido antihorario casi el 80% del tiempo. Puro ahorro programado. Bitcoin y Solana apenas rondan el 30%. Pura persecución. ¿Y la prueba de que esto mide psicología humana y no horarios? El oro y Tesla cotizan en bolsa regulada, pero giran como cripto. Uno por refugio reactivo. La otra por fiebre minorista.",
+      "narration_tts": "Medí este pulso en veintiséis mil doscientas noventa y cuatro instantáneas reales durante veintiséis años. Emergió una señal noventa y nueve punto nueve por ciento independiente de indicadores clásicos como el o be ve, o el ce eme efe. El ese pe quinientos y el Násdac giran en sentido antihorario casi el ochenta por ciento del tiempo. Puro ahorro programado. Bitcoin y Solana apenas rondan el treinta por ciento. Pura persecución. ¿Y la prueba de que esto mide psicología humana y no horarios? El oro y Tesla cotizan en bolsa regulada, pero giran como cripto. Uno por refugio reactivo. La otra por fiebre minorista.",
+      "pause_after_s": 0.75,
+      "on_screen_text": {
+        "headline": "26,294 instantáneas reales (2000–2026)",
+        "subheadline": "99.9% independiente de OBV",
+        "highlights": [
+          "S&P 500 · 79%",
+          "Nasdaq-100 · 78%",
+          "Tesla · 39%",
+          "Oro · 36%",
+          "Bitcoin · 33%",
+          "Solana · 28%"
+        ]
+      },
+      "visual_direction": "Espectro horizontal minimalista: bloque cian institucional arriba (SPY 79%, QQQ 78%), bloque coral cripto abajo (BTC 33%, SOL 28%), e iluminación ámbar especial sobre Oro (36%) y Tesla (39%).",
+      "sync_cues": [
+        "veintiséis",
+        "independiente",
+        "ochenta",
+        "treinta",
+        "oro",
+        "Tesla"
+      ],
+      "resolved_cues_s": {
+        "veintiséis": 1.0625,
+        "independiente": 8.8375,
+        "ochenta": 16.3125,
+        "treinta": 22.3,
+        "oro": 29.55,
+        "Tesla": 29.825
+      },
+      "audio_wav": "audio/wav48/s04_la_huella_del_capital.wav",
+      "words_json": "audio/raw/s04_la_huella_del_capital_words.json",
+      "speech_duration_s": 38.352,
+      "scene_duration_s": 39.1333,
+      "target_frames_60fps": 2348,
+      "target_frames_15fps": 587
+    },
+    {
+      "id": "s05_mutacion_microstrategy",
+      "act": "Acto 2 · Quién Empuja a Quién",
+      "chapter_title": "La mutación en vivo de MicroStrategy",
+      "title": "El Experimento Vivo: MicroStrategy (2018–2026)",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#anim_02",
+      "narration_display": "Pero la prueba definitiva ocurrió dentro de una sola empresa. MicroStrategy. Durante dieciocho años fue una tranquila firma de software, con un 53% de giro antihorario. En agosto de 2020 convirtió su tesorería en Bitcoin. Mira su órbita. Sin cambiar de nombre en bolsa, mutó de especie financiera y cayó al 27%, calcando el pulso horario de Bitcoin. En 2024, tras llegar los ETFs de Wall Street, rebotó al 42%. Mientras tanto, los indicadores planos seguían ciegos en el 50%.",
+      "narration_tts": "Pero la prueba definitiva ocurrió dentro de una sola empresa. MicroStrategy. Durante dieciocho años fue una tranquila firma de software, con un cincuenta y tres por ciento de giro antihorario. En agosto de dos mil veinte convirtió su tesorería en Bitcoin. Mira su órbita. Sin cambiar de nombre en bolsa, mutó de especie financiera y cayó al veintisiete por ciento, calcando el pulso horario de Bitcoin. En dos mil veinticuatro, tras llegar los fondos cotizados de Wall Street, rebotó al cuarenta y dos por ciento. Mientras tanto, los indicadores planos seguían ciegos en el cincuenta por ciento.",
+      "pause_after_s": 0.85,
+      "on_screen_text": {
+        "headline": "MicroStrategy · Mutación en vivo",
+        "eras": [
+          "Software · 53%",
+          "Tesorería BTC · 27%",
+          "Post-ETF · 42%"
+        ],
+        "blind_ref": "CMF(20) plano · ~50% ciego"
+      },
+      "visual_direction": "Doble atractor sincronizado (MSTR vs BTC, 115 cortes reales). Al cruzar 'Ago 2020', la órbita cian de MSTR vira dramáticamente a coral cayendo al 27%, mientras la referencia gris de CMF sigue inerte.",
+      "sync_cues": [
+        "MicroStrategy",
+        "cincuenta",
+        "agosto",
+        "veintisiete",
+        "cuarenta",
+        "ciegos"
+      ],
+      "resolved_cues_s": {
+        "MicroStrategy": 3.725,
+        "cincuenta": 8.95,
+        "agosto": 12.0875,
+        "veintisiete": 20.85,
+        "cuarenta": 29.2125,
+        "ciegos": 33.925
+      },
+      "audio_wav": "audio/wav48/s05_mutacion_microstrategy.wav",
+      "words_json": "audio/raw/s05_mutacion_microstrategy_words.json",
+      "speech_duration_s": 36.504,
+      "scene_duration_s": 37.4,
+      "target_frames_60fps": 2244,
+      "target_frames_15fps": 561
+    },
+    {
+      "id": "s06_elipses_vs_hiperbolas",
+      "act": "Acto 3 · Geometría y Escala",
+      "chapter_title": "Elipses cerradas vs. escapes hiperbólicos",
+      "title": "Órbitas Cerradas vs. Escapes Hiperbólicos",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#ilus_02",
+      "narration_display": "El sentido del giro revela quién lleva el volante. La forma de la curva revela si el suelo se está abriendo. Ajustando cónicas exactas y ecuaciones diferenciales, el mercado se parte en dos geometrías. Elipses cerradas que devuelven los excesos al centro, como el S&P 500. O hipérbolas abiertas donde la tensión escapa, como Nvidia a fines de 2021. En el 100% de los veinticinco mercados medidos, las elipses fueron tres veces más estables.",
+      "narration_tts": "El sentido del giro revela quién lleva el volante. La forma de la curva revela si el suelo se está abriendo. Ajustando cónicas exactas y ecuaciones diferenciales, el mercado se parte en dos geometrías. Elipses cerradas que devuelven los excesos al centro, como el ese pe quinientos. O hipérbolas abiertas donde la tensión escapa, como Envidia a fines de dos mil veintiuno. En el cien por ciento de los veinticinco mercados medidos, las elipses fueron tres veces más estables.",
+      "pause_after_s": 0.75,
+      "on_screen_text": {
+        "headline": "Dos geometrías en 25 mercados",
+        "left_badge": "Elipse cerrada · 3x más estable",
+        "right_badge": "Hipérbola abierta · Escape"
+      },
+      "visual_direction": "Trazado algebraico de Fitzgibbon lado a lado: a la izquierda la elipse esmeralda contenida de SPY; a la derecha la hipérbola coral abierta de Nvidia (2021-12-16).",
+      "sync_cues": [
+        "volante",
+        "elipses",
+        "hipérbolas",
+        "Envidia",
+        "tres"
+      ],
+      "resolved_cues_s": {
+        "volante": 1.9,
+        "elipses": 12.7,
+        "hipérbolas": 17.7125,
+        "Envidia": 20.275,
+        "tres": 26.725
+      },
+      "audio_wav": "audio/wav48/s06_elipses_vs_hiperbolas.wav",
+      "words_json": "audio/raw/s06_elipses_vs_hiperbolas_words.json",
+      "speech_duration_s": 28.872,
+      "scene_duration_s": 29.6667,
+      "target_frames_60fps": 1780,
+      "target_frames_15fps": 445
+    },
+    {
+      "id": "s07_fractal_bitcoin_6x",
+      "act": "Acto 3 · Geometría y Escala",
+      "chapter_title": "Invariancia fractal 6x en Bitcoin",
+      "title": "Invariancia Fractal 6x en Bitcoin",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#ilus_02",
+      "narration_display": "Aquí dudé de mi propio instrumento. ¿Y si estas formas fueran un espejismo del gráfico diario? Congelé cada parámetro del motor y aumenté el zoom seis veces, bajando a velas de cuatro horas en Bitcoin. La proporción de espirales se mantuvo clavada. 47% en diario. 47% en cuatro horas. La geometría no era un artefacto del reloj. Pertenecía al mercado.",
+      "narration_tts": "Aquí dudé de mi propio instrumento. ¿Y si estas formas fueran un espejismo del gráfico diario? Congelé cada parámetro del motor y aumenté el zoom seis veces, bajando a velas de cuatro horas en Bitcoin. La proporción de espirales se mantuvo clavada. Cuarenta y siete por ciento en diario. Cuarenta y siete por ciento en cuatro horas. La geometría no era un artefacto del reloj. Pertenecía al mercado.",
+      "pause_after_s": 0.8,
+      "on_screen_text": {
+        "headline": "Zoom 6x · Cero reajuste",
+        "left_badge": "Bitcoin 1D · 47.3% espiral",
+        "right_badge": "Bitcoin 4H · 47.2% espiral"
+      },
+      "visual_direction": "Lente óptica ejecuta zoom 6x desde Bitcoin diario hacia 4 horas (3,543 velas), seguido de dos columnas gemelas clavándose en 47.3% y 47.2%.",
+      "sync_cues": [
+        "dudé",
+        "seis",
+        "cuatro",
+        "clavada",
+        "pertenecía"
+      ],
+      "resolved_cues_s": {
+        "dudé": 0.4125,
+        "seis": 8.3625,
+        "cuatro": 10.2375,
+        "clavada": 13.95,
+        "pertenecía": 23.675
+      },
+      "audio_wav": "audio/wav48/s07_fractal_bitcoin_6x.wav",
+      "words_json": "audio/raw/s07_fractal_bitcoin_6x_words.json",
+      "speech_duration_s": 25.704,
+      "scene_duration_s": 26.5333,
+      "target_frames_60fps": 1592,
+      "target_frames_15fps": 398
+    },
+    {
+      "id": "s08_sismografo_microsoft_2022",
+      "act": "Acto 4 · Sismógrafo y Límites",
+      "chapter_title": "Sismógrafo 2D: el techo de Microsoft",
+      "title": "Duelo Pre-Desplome y Microsoft (Enero 2022)",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#anim_03_ilus_03",
+      "narration_display": "¿Puede esa apertura avisar antes de un gran desplome? En quince mercados vírgenes previos a 166 caídas severas, la célebre alarma de Scheffer rindió 0.47. Peor que lanzar una moneda. En cambio, la tensión bidimensional alcanzó 0.60, superando a las bandas de Bollinger y detectando mayor fragilidad previa en seis de cada diez duelos. Así se vio Microsoft al iniciar 2022. El indicador plano dormía. Mientras tanto, su órbita ya se abría en rojo, antes de perder casi cien dólares.",
+      "narration_tts": "¿Puede esa apertura avisar antes de un gran desplome? En quince mercados vírgenes previos a ciento sesenta y seis caídas severas, la célebre alarma de Shéfer rindió cero punto cuarenta y siete. Peor que lanzar una moneda. En cambio, la tensión bidimensional alcanzó cero punto sesenta, superando a las bandas de Bollinger y detectando mayor fragilidad previa en seis de cada diez duelos. Así se vio Microsoft al iniciar dos mil veintidós. El indicador plano dormía. Mientras tanto, su órbita ya se abría en rojo, antes de perder casi cien dólares.",
+      "pause_after_s": 0.8,
+      "on_screen_text": {
+        "headline": "Sismógrafo en 15 mercados vírgenes",
+        "ranking": [
+          "KineTopus 2D · 0.603",
+          "Bandas Bollinger · 0.584",
+          "Azar · 0.500",
+          "Scheffer AR(1) · 0.473"
+        ],
+        "case_label": "Microsoft 2022 · Tensión en rojo"
+      },
+      "visual_direction": "Ranking limpio ROC-AUC con matriz 6/10; transición a los 68 cortes reales de Microsoft donde AR(1) duerme en gris mientras la órbita 2D se abre de esmeralda a coral intenso.",
+      "sync_cues": [
+        "desplome",
+        "moneda",
+        "punto sesenta",
+        "Microsoft",
+        "dormía",
+        "rojo"
+      ],
+      "resolved_cues_s": {
+        "desplome": 1.725,
+        "moneda": 11.9375,
+        "punto sesenta": 15.95,
+        "Microsoft": 22.975,
+        "dormía": 26.8125,
+        "rojo": 30.3875
+      },
+      "audio_wav": "audio/wav48/s08_sismografo_microsoft_2022.wav",
+      "words_json": "audio/raw/s08_sismografo_microsoft_2022_words.json",
+      "speech_duration_s": 33.528,
+      "scene_duration_s": 34.3333,
+      "target_frames_60fps": 2060,
+      "target_frames_15fps": 515
+    },
+    {
+      "id": "s09_limite_honesto_covid",
+      "act": "Acto 4 · Sismógrafo y Límites",
+      "chapter_title": "El límite honesto ante choques externos",
+      "title": "El Límite Honesto: Febrero de 2020",
+      "rate": "+0%",
+      "data_source": "real_windows_substack.json#anim_03_ilus_03.spy_precovid",
+      "narration_display": "Ahora bien. Un instrumento serio demuestra su rigor enseñando también lo que no puede ver. Mira al S&P 500 el 12 de febrero de 2020, días antes del colapso sanitario por el COVID. Su elipse lucía verde y serena. Y tenía razón. Dentro del libro de órdenes no había fractura alguna. Un microscopio mide la fragilidad interna del capital. Jamás adivina un virus externo.",
+      "narration_tts": "Ahora bien. Un instrumento serio demuestra su rigor enseñando también lo que no puede ver. Mira al ese pe quinientos el doce de febrero de dos mil veinte, días antes del colapso sanitario por el cóvid. Su elipse lucía verde y serena. Y tenía razón. Dentro del libro de órdenes no había fractura alguna. Un microscopio mide la fragilidad interna del capital. Jamás adivina un virus externo.",
+      "pause_after_s": 0.8,
+      "on_screen_text": {
+        "headline": "Lo que el microscopio NO adivina",
+        "badge": "S&P 500 · Feb 2020 (Calma)",
+        "footer": "Lee fracturas internas · No virus externos"
+      },
+      "visual_direction": "Elipse real esmeralda de SPY el 2020-02-12 en calma serena; onda externa impacta desde fuera del marco simbolizando un choque exógeno.",
+      "sync_cues": [
+        "rigor",
+        "febrero",
+        "serena",
+        "virus"
+      ],
+      "resolved_cues_s": {
+        "rigor": 3.0375,
+        "febrero": 7.4,
+        "serena": 13.125,
+        "virus": 23.825
+      },
+      "audio_wav": "audio/wav48/s09_limite_honesto_covid.wav",
+      "words_json": "audio/raw/s09_limite_honesto_covid_words.json",
+      "speech_duration_s": 25.512,
+      "scene_duration_s": 26.3333,
+      "target_frames_60fps": 1580,
+      "target_frames_15fps": 395
+    },
+    {
+      "id": "s10_radiografia_noviembre_2026",
+      "act": "Acto 5 · El Tablero en Acción",
+      "chapter_title": "Radiografía real (Noviembre 2026)",
+      "title": "Una Fotografía Real: Noviembre de 2026",
+      "rate": "-5%",
+      "data_source": "real_windows_substack.json#ilus_04_now",
+      "narration_display": "Para ver cómo habla este mapa en el mundo real, observa la radiografía capturada en noviembre de 2026. Sin predicciones mágicas, un solo vistazo separó tres estados físicos a la vez. Primero, el S&P 500 y el Nasdaq en calma orbital. Segundo, el oro disipando energía hacia su centro. Y tercero, tanto Nvidia como Bitcoin girando ya con tensión interna activa, exigiendo máxima atención.",
+      "narration_tts": "Para ver cómo habla este mapa en el mundo real, observa la radiografía capturada en noviembre de dos mil veintiséis. Sin predicciones mágicas, un solo vistazo separó tres estados físicos a la vez. Primero, el ese pe quinientos y el Násdac en calma orbital. Segundo, el oro disipando energía hacia su centro. Y tercero, tanto Envidia como Bitcoin girando ya con tensión interna activa, exigiendo máxima atención.",
+      "pause_after_s": 0.85,
+      "on_screen_text": {
+        "headline": "Instantánea real · Noviembre 2026",
+        "group_1": "SPY · QQQ · Calma orbital ↺",
+        "group_2": "Oro · Equilibrio amortiguado",
+        "group_3": "Nvidia · Bitcoin · Tensión activa"
+      },
+      "visual_direction": "Tres columnas oscuras minimalistas que se iluminan en secuencia con sus órbitas reales de noviembre de 2026: cian sereno, esmeralda convergente y coral activo.",
+      "sync_cues": [
+        "noviembre",
+        "calma",
+        "oro",
+        "tensión"
+      ],
+      "resolved_cues_s": {
+        "noviembre": 4.3263,
+        "calma": 15.0132,
+        "oro": 17.75,
+        "tensión": 23.5526
+      },
+      "audio_wav": "audio/wav48/s10_radiografia_noviembre_2026.wav",
+      "words_json": "audio/raw/s10_radiografia_noviembre_2026_words.json",
+      "speech_duration_s": 27.288,
+      "scene_duration_s": 28.2,
+      "target_frames_60fps": 1692,
+      "target_frames_15fps": 423
+    },
+    {
+      "id": "s11_epilogo_panel_de_vuelo",
+      "act": "Acto 6 · La Segunda Dimensión",
+      "chapter_title": "Epílogo: dejar de mirar sombras",
+      "title": "Dejar de Mirar Sombras",
+      "rate": "-6%",
+      "data_source": "real_windows_substack.json#guide_ilus_00",
+      "narration_display": "Esto no es una bola de cristal para adivinar titulares. Es un instrumento de navegación. Te da serenidad para sostener posiciones cuando la elipse gira en manos pacientes. Y te da disciplina para reducir riesgo a la mitad cuando el giro se invierte y la órbita se abre en rojo. Igual que ocurre al poner una gota de agua bajo el microscopio. Cuando descubres la segunda dimensión del dinero, ya nunca vuelves a ver una línea plana igual.",
+      "narration_tts": "Esto no es una bola de cristal para adivinar titulares. Es un instrumento de navegación. Te da serenidad para sostener posiciones cuando la elipse gira en manos pacientes. Y te da disciplina para reducir riesgo a la mitad cuando el giro se invierte y la órbita se abre en rojo. Igual que ocurre al poner una gota de agua bajo el microscopio. Cuando descubres la segunda dimensión del dinero, ya nunca vuelves a ver una línea plana igual.",
+      "pause_after_s": 3.2,
+      "on_screen_text": {
+        "headline": "La segunda dimensión del dinero",
+        "left_rule": "↺ Elipse estable · Sostener",
+        "right_rule": "↻ Apertura roja · Mitad riesgo",
+        "closing": "KineTopus · Microscopio Físico",
+        "disclaimer": "Investigación cuantitativa y divulgativa · No es asesoría financiera"
+      },
+      "visual_direction": "Panel dual minimalista (esmeralda/cian vs coral) que da paso a una única órbita luminosa central; se pliega en línea 1D y vuelve a desplegarse en 2D con 3.2 s de respiración final y nota legal sutil.",
+      "sync_cues": [
+        "navegación",
+        "sostener",
+        "mitad",
+        "microscopio",
+        "dimensión"
+      ],
+      "resolved_cues_s": {
+        "navegación": 4.7473,
+        "sostener": 7.3404,
+        "mitad": 13.4442,
+        "microscopio": 19.3883,
+        "dimensión": 22.3537
+      },
+      "audio_wav": "audio/wav48/s11_epilogo_panel_de_vuelo.wav",
+      "words_json": "audio/raw/s11_epilogo_panel_de_vuelo_words.json",
+      "speech_duration_s": 26.904,
+      "scene_duration_s": 30.1333,
+      "target_frames_60fps": 1808,
+      "target_frames_15fps": 452
+    }
+  ]
+}
