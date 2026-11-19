@@ -12,17 +12,3 @@ Thumbs.db
 *.bak
 reports/*
 !reports/.gitkeep
-
-# Video studio / Manim / TTS isolated environment & heavy artifacts
-.venv_video/
-video_studio/media/
-video_studio/models/
-video_studio/output/
-video_studio/audio_tests/
-video_studio/audio/
-video_studio/build/
-*.mp4
-*.mov
-*.mkv
-*.wav
-*.mp3
