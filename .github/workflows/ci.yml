@@ -1,0 +1,42 @@
+name: KineTopus-Analyst CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  audit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    env:
+      MPLBACKEND: Agg
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout KineTopus-Analyst
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install upstream scientific core (KineTopus-Engine)
+        run: |
+          python -m pip install --upgrade pip
+          pip install "git+https://github.com/JuanDie778/KineTopus-Engine.git"
+
+      - name: Install KineTopus-Analyst with service and dev extras
+        run: |
+          pip install -e ".[service,dev]"
+
+      - name: Run full audit test suite
+        run: |
+          pytest tests/ -v -W ignore::UserWarning

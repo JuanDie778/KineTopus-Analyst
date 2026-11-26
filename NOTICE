@@ -1,9 +1,16 @@
-KineTopus-Pro (Proprietary Software - All Rights Reserved)
+KineTopus-Analyst (package: kinetopus_pro)
+Copyright (c) 2026 Juan Diego Ussa Aponte. All rights reserved.
 
-This product builds upon the open-source scientific core `kinetopus-engine`
-(Apache License, Version 2.0) as an external library dependency via
-`kinetopus_pro.engine_bridge`, without modifying or relicensing the upstream
-scientific codebase.
+This product is licensed under the KineTopus-Analyst Source-Available
+Non-Commercial Evaluation License (see LICENSE).
 
-Upstream Open-Source Core:
-- KineTopus Engine (Apache-2.0): https://github.com/JuanDie778/KineTopus-Engine
+Open-Core Architecture Attribution:
+KineTopus-Analyst builds upon the open-source scientific core
+`kinetopus-engine` (Apache License, Version 2.0) as an external library
+dependency via `kinetopus_pro.engine_bridge`, without modifying or
+relicensing the upstream scientific codebase.
+
+Upstream Open-Source Core & Scientific Research:
+- Repository (Apache-2.0): https://github.com/JuanDie778/KineTopus-Engine
+- Preprint (SSRN ID 7431018): https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018
+- Zenodo DOI: https://doi.org/10.5281/zenodo.24166175

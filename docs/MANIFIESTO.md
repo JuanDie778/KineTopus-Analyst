@@ -1,12 +1,14 @@
+🌐 **Español** | [English](en/MANIFESTO.md)
+
 # MANIFIESTO DEL PROYECTO: KINETOPUS-ANALYST
 
-> **Norte Estratégico del Producto:** Convertir la teoría de Física Computacional Financiera de **KineTopus Engine** en un **servicio e indicador cuantitativo real, útil, intuitivo, portable y accesible** para analistas técnicos, plataformas financieras y público general.
+> **Norte Estratégico del Producto:** Convertir la teoría de Física Computacional Financiera de [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) en un **servicio e indicador cuantitativo real, útil, intuitivo, portable y accesible** para analistas técnicos, plataformas financieras y público general.
 
 ---
 
 ## 1. Propósito y Norte del Proyecto (`De Paper Científico a Servicio Real`)
 
-**KineTopus-Analyst** (paquete `kinetopus_pro`) es la capa de producto y servicio construida en arquitectura Open-Core sobre el motor científico público **KineTopus Engine** (preprint formal en SSRN / Zenodo bajo licencia `Apache-2.0`).
+**KineTopus-Analyst** (paquete `kinetopus_pro`) es la capa de producto y servicio construida en arquitectura Open-Core sobre el motor científico público [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) ([SSRN Preprint 7431018](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018) · [Zenodo DOI](https://doi.org/10.5281/zenodo.24166175), licencia `Apache-2.0`).
 
 Mientras `KineTopus Engine` demuestra en el ámbito académico que las series financieras esconden dinámicas continuas analizables mediante **FFT**, **Splines $C^2$**, **CUSUM**, descubrimiento simbólico de EDOs (**SINDy**) y proyección estocástica (**Euler-Maruyama**), **KineTopus-Analyst** nace con una misión distinta y complementaria:
 

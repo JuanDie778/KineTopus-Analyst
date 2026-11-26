@@ -107,6 +107,7 @@ def test_headless_pipeline_memory_and_json_contract(synthetic_inertial_df: pd.Da
         "TRANSICIONAL_BORDE",
         "EXOGENO_FUNDAMENTALISTA",
         "INESTABLE_O_RUIDO_EXTREMO",
+        "INSUFICIENTE",
     }
 
     # 4. Verificar Geometría, Invalidación CUSUM y Fechas ISO

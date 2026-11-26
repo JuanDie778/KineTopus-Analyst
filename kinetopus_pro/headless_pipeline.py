@@ -585,6 +585,26 @@ class KinetopusHeadlessPipeline:
         }
 
     @staticmethod
+    def _is_projection_numerically_divergent(
+        raw_det_prices: Any,
+        last_price: float,
+        disable_returns: bool,
+    ) -> bool:
+        """Detecta explosiones exponenciales finitas (ej. 1e200) de EDOs SINDy con λ>0."""
+        arr = np.asarray(raw_det_prices if raw_det_prices is not None else [], dtype=np.float64).reshape(-1)
+        if len(arr) == 0 or not bool(np.all(np.isfinite(arr))):
+            return True
+        if disable_returns:
+            return bool(np.max(np.abs(arr - float(last_price))) > 1e4 * max(abs(float(last_price)), 1.0))
+        if float(last_price) > 0.0:
+            return bool(
+                np.any(arr <= 0.0)
+                or float(np.max(arr)) > float(last_price) * 10.0
+                or float(np.min(arr)) < float(last_price) * 1e-4
+            )
+        return False
+
+    @staticmethod
     def _ensure_geometric_projection(
         last_price: float,
         raw_det_t: np.ndarray,
@@ -618,8 +638,11 @@ class KinetopusHeadlessPipeline:
             unstable_flag
             or empty_r_eq
             or len(det_prices_arr) != h_steps
-            or not bool(np.all(np.isfinite(det_prices_arr)))
-            or (not disable_returns and bool(np.any(det_prices_arr <= 0.0)))
+            or KinetopusHeadlessPipeline._is_projection_numerically_divergent(
+                det_prices_arr,
+                float(last_price),
+                disable_returns,
+            )
         )
         if not bad_vals:
             return det_t_out, np.ascontiguousarray(det_prices_arr, dtype=np.float64), False
@@ -704,94 +727,17 @@ class KinetopusHeadlessPipeline:
         steps: float = 0.1,
     ) -> Tuple[float, Dict[str, Any]]:
         """
-        Paridad matemática exacta con `CUSUMAutoTuner.run_search` (k en [0.1..5.0] paso 0.1,
-        tolerancia base 0.0050, H=5.0, poly_degree=1), ejecutando FFT en proceso y cacheando
-        segmentos (start, end) idénticos para evitar crear subprocesos anidados en Windows.
+        Delega en `CUSUMAutoTuner.run_search` de `kinetopus-engine` (>=2.0.0), que ya
+        ejecuta FFT en proceso para `n_features <= 4` y cachea segmentos BIC en float64,
+        garantizando paridad bit-exacta con upstream sin subprocesos anidados.
         """
         cfg = self.cfg
-        if not cfg.in_process_fft:
-            tuner = CUSUMAutoTuner(
-                df_active.copy(),
-                disable_norm=cfg.disable_norm,
-                disable_returns=cfg.disable_returns,
-            )
-            return tuner.run_search(min_drift=min_drift, max_drift=max_drift, steps=steps)
-
-        log_returns, volumen_z, precio_raw, dt_val = MarketLoader.prepare_quant_input(
-            df_active.copy(), disable_norm=cfg.disable_norm, disable_returns=cfg.disable_returns
+        tuner = CUSUMAutoTuner(
+            df_active.copy(),
+            disable_norm=cfg.disable_norm,
+            disable_returns=cfg.disable_returns,
         )
-        t = np.arange(len(log_returns), dtype=np.float64) * dt_val
-        total_velas = len(t)
-
-        fft_r = SpectralAnalyzer._compute_fft(log_returns, dt_val, 2)
-        fft_v = SpectralAnalyzer._compute_fft(volumen_z, dt_val, 2)
-
-        blender = ContinuousBlender(tolerance=0.0050)
-        blender.fit(t, log_returns, fft_r["periods"], feature_idx=0)
-        blender.fit(t, volumen_z, fft_v["periods"], feature_idx=1)
-
-        r_smooth, r_dot, _ = blender.compute_continuous(0, t)
-        v_smooth, v_dot, _ = blender.compute_continuous(1, t)
-
-        x_matrix = np.ascontiguousarray(np.column_stack((r_smooth, v_smooth)), dtype=np.float64)
-        x_dot_matrix = np.ascontiguousarray(np.column_stack((r_dot, v_dot)), dtype=np.float64)
-        discoverer = PhysicsDiscoverer(poly_degree=1)
-
-        seg_r2_cache: Dict[Tuple[int, int], float] = {}
-        shift_eval_cache: Dict[Tuple[int, ...], Tuple[float, float, int]] = {}
-
-        best_drift = min_drift
-        best_score = -float("inf")
-        best_report: Dict[str, Any] = {}
-
-        drift_values = np.arange(min_drift, max_drift + steps, steps)
-        for k in drift_values:
-            detector = RegimeShiftDetector(threshold=5.0, drift=float(k))
-            cusum_report = detector.detect(log_returns, r_smooth)
-            shift_idx = cusum_report["shift_indices"]
-            sh_key = tuple(shift_idx)
-
-            if sh_key not in shift_eval_cache:
-                boundaries = [0] + shift_idx + [total_velas]
-                weighted_r2_sum = 0.0
-                for i in range(len(boundaries) - 1):
-                    start = boundaries[i]
-                    end = boundaries[i + 1]
-                    length = end - start
-                    if length < 15:
-                        continue
-                    if (start, end) not in seg_r2_cache:
-                        p_rep = discoverer.extract_equations(
-                            t=t[start:end],
-                            x=x_matrix[start:end],
-                            x_dot=x_dot_matrix[start:end],
-                            dt=dt_val,
-                            horizon_steps=1,
-                            sigma_res_r=0.0,
-                            sigma_res_v=0.0,
-                            last_price=float(precio_raw[end - 1]),
-                            disable_norm=cfg.disable_norm,
-                            disable_returns=cfg.disable_returns,
-                        )
-                        seg_r2_cache[(start, end)] = max(0.0, float(p_rep["score"]))
-                    peso = length / float(total_velas)
-                    weighted_r2_sum += seg_r2_cache[(start, end)] * peso
-
-                num_quiebres = len(shift_idx)
-                fitness = weighted_r2_sum / (1.0 + 0.1 * num_quiebres)
-                shift_eval_cache[sh_key] = (fitness, weighted_r2_sum, num_quiebres)
-
-            fitness, weighted_r2_sum, num_quiebres = shift_eval_cache[sh_key]
-            if fitness > best_score:
-                best_score = fitness
-                best_drift = float(k)
-                best_report = {
-                    "fitness": fitness,
-                    "weighted_r2": weighted_r2_sum,
-                    "num_quiebres": num_quiebres,
-                }
-
-        return round(best_drift, 2), best_report
+        return tuner.run_search(min_drift=min_drift, max_drift=max_drift, steps=steps)
 
     def _run_core_pass(
         self,
@@ -2126,7 +2072,12 @@ class KinetopusHeadlessPipeline:
 
         # 4. Autopilot Quant (Rescate 2D solo ante inestabilidad numérica o dr/dt = 0; nunca por R²)
         active_rep = core_out["active_report"]
-        orig_unstable = bool(active_rep.get("prediction", {}).get("unstable", False))
+        orig_pred = active_rep.get("prediction", {})
+        orig_unstable = bool(orig_pred.get("unstable", False)) or self._is_projection_numerically_divergent(
+            orig_pred.get("det_price_path", []),
+            float(precio_raw[-1]),
+            cfg.disable_returns,
+        )
         orig_empty = bool(active_rep.get("empty_r_eq", False))
         orig_r2 = float(active_rep.get("score", 0.0))
 
@@ -2158,7 +2109,12 @@ class KinetopusHeadlessPipeline:
                 )
                 cand_rep = cand_out["active_report"]
                 cand_score = float(cand_rep.get("score", 0.0))
-                cand_unstable = bool(cand_rep.get("prediction", {}).get("unstable", True))
+                cand_pred = cand_rep.get("prediction", {})
+                cand_unstable = bool(cand_pred.get("unstable", True)) or self._is_projection_numerically_divergent(
+                    cand_pred.get("det_price_path", []),
+                    float(precio_raw[-1]),
+                    cfg.disable_returns,
+                )
                 cand_empty = bool(cand_rep.get("empty_r_eq", True))
 
                 if not cand_empty and not cand_unstable:
@@ -2217,7 +2173,11 @@ class KinetopusHeadlessPipeline:
         pred_raw = active_rep.get("prediction", {})
         raw_det_t = np.asarray(pred_raw.get("det_t_path", []), dtype=np.float64)
         raw_det_prices = np.asarray(pred_raw.get("det_price_path", []), dtype=np.float64)
-        raw_unstable = bool(pred_raw.get("unstable", False))
+        raw_unstable = bool(pred_raw.get("unstable", False)) or self._is_projection_numerically_divergent(
+            raw_det_prices,
+            float(precio_raw[-1]),
+            cfg.disable_returns,
+        )
         raw_empty = bool(active_rep.get("empty_r_eq", False))
 
         det_t_arr, det_prices_arr, geometric_fallback_used = self._ensure_geometric_projection(

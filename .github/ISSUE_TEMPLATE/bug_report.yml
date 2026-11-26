@@ -1,0 +1,39 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in KineTopus-Analyst (kinetopus_pro)
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve **KineTopus-Analyst**. Please verify that the issue is not in the upstream `kinetopus-engine` core before filing here.
+  - type: input
+    id: version
+    attributes:
+      label: KineTopus-Analyst Version
+      description: Output of `python -c "import kinetopus_pro; print(kinetopus_pro.__version__)"`
+      placeholder: "0.4.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS & Python Version
+      placeholder: "Windows 11 / Ubuntu 24.04 · Python 3.11"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command / Code Executed
+      placeholder: |
+        kinetopus-analyze --ticker "BTC-USD" --interval 1d
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What Happened & Expected Behavior
+      description: Include any traceback, HTTP status code, or affected report artifact (`report.html`, `widget.html`, `indicator.pine`, etc.).
+    validations:
+      required: true

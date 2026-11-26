@@ -1,0 +1,55 @@
+KineTopus-Analyst Source-Available Non-Commercial Evaluation License
+Version 1.0 (2026)
+
+Copyright (c) 2026 Juan Diego Ussa Aponte. All rights reserved.
+
+1. GRANT OF PERSONAL, EDUCATIONAL & RESEARCH EVALUATION RIGHTS
+Subject to the terms and conditions of this License, the Copyright Holder
+hereby grants you a non-exclusive, worldwide, royalty-free, non-transferable,
+non-sublicensable license to view, clone, fork for private study, and execute
+the Software locally solely for:
+  (a) personal, non-commercial study and quantitative experimentation;
+  (b) academic research, peer verification, or educational instruction; and
+  (c) internal technical evaluation of the Software prior to obtaining a
+      commercial license.
+
+2. RESTRICTIONS (NO COMMERCIAL USE, REDISTRIBUTION OR HOSTED SAAS)
+Except as expressly permitted in Section 1 or under a separate written
+Commercial License executed by the Copyright Holder, you may NOT:
+  (a) use the Software, its outputs, indicators, feeds, Pine Script overlays,
+      alerts, widgets, or API/MCP services for commercial purposes, including
+      proprietary trading operations, paid investment newsletters, commercial
+      signal services, client advisory, brokerage products, or fintech platforms;
+  (b) sell, resell, rent, lease, sublicense, publish, distribute, or
+      redistribute the Software or derivative works thereof; or
+  (c) host or expose the Software (in whole or in part) as a hosted API,
+      cloud platform, managed service, or Software-as-a-Service (SaaS) for
+      third parties.
+
+3. UPSTREAM OPEN-SOURCE CORE ATTRIBUTION
+This Software integrates and depends upon `kinetopus-engine`
+(https://github.com/JuanDie778/KineTopus-Engine), which remains separately
+licensed under the Apache License, Version 2.0. Nothing in this License
+modifies, restricts, or relicenses `kinetopus-engine` (see NOTICE).
+
+4. NO FINANCIAL ADVICE
+THE SOFTWARE IS PROVIDED FOR QUANTITATIVE RESEARCH AND INFORMATIONAL PURPOSES
+ONLY. NOTHING IN THIS SOFTWARE OR ITS OUTPUTS CONSTITUTES FINANCIAL,
+INVESTMENT, TRADING, LEGAL, OR TAX ADVICE. YOU ASSUME ALL RISK FOR ANY
+TRADING OR INVESTMENT DECISIONS.
+
+5. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, AND NON-INFRINGEMENT. IN NO EVENT
+SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, TRADING LOSSES,
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE,
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+6. COMMERCIAL & B2B LICENSING
+For commercial deployment, B2B platform embedding (charts, feeds, widgets,
+TradingView integrations, APIs), or enterprise licensing inquiries, contact:
+  Juan Diego Ussa Aponte
+  Email: ussaapontejuandiego@gmail.com
+  GitHub: https://github.com/JuanDie778

@@ -1,81 +1,195 @@
-# KineTopus-Analyst (`v0.4.0`)
+🌐 **English** | [Español](README.es.md)
 
-**Producto y Servicio Cuantitativo de Caja Blanca (Enfoque Geométrico Puro + Suite B2B Portable)** construido en arquitectura **Open-Core** sobre el motor científico público `kinetopus-engine` (`Apache-2.0`). Incluye suite *headless* Multi-Lente (`2000v / 1000v / 500v`), proyección simultánea `t+150` en las tres escalas, cono calibrado de integración simple EWMA, ajuste Curva-Precio explícito, entregable interactivo offline (`report.html` + `analysis.md`), **feed B2B ligero (`indicator_feed.json`), widget SVG `< 35 KB` embebible (`widget.html`), overlay TradingView Pine Script v5 (`indicator.pine`), motor de alertas activas deduplicadas (`alerts.json` + webhook)** y **micro-servicio HTTP / MCP (`kinetopus-serve`, `kinetopus-mcp`)**.
+<div align="center">
 
-> 📖 **Norte del Proyecto:** Consulta el documento rector completo en [docs/MANIFIESTO.md](docs/MANIFIESTO.md).
+# 🔭 KineTopus-Analyst (`v0.4.0`)
+
+**White-Box Multi-Lens Market Geometry, Portable B2B Indicator Suite (`< 35 KB` SVG Widget, TradingView Pine Script v5, Active Alerts) & FastAPI / MCP Service**
+
+*Turning Computational Financial Physics differential equations into an intuitive, reproducible, local-first radar.*
+
+[![CI](https://github.com/JuanDie778/KineTopus-Analyst/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanDie778/KineTopus-Analyst/actions/workflows/ci.yml)
+[![Release v0.4.0](https://img.shields.io/badge/Release-v0.4.0-0ea5e9.svg)](https://github.com/JuanDie778/KineTopus-Analyst/releases/tag/v0.4.0)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: Source-Available](https://img.shields.io/badge/License-Source--Available-f59e0b.svg)](LICENSE)
+[![Upstream Core: Apache-2.0](https://img.shields.io/badge/Upstream%20Core-KineTopus--Engine%20(Apache--2.0)-22d3ee.svg)](https://github.com/JuanDie778/KineTopus-Engine)
+<br>
+[![SSRN Preprint](https://img.shields.io/badge/SSRN-Preprint%207431018-002D62.svg?logo=elsevier&logoColor=white)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018)
+[![Zenodo DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.24166175-blue.svg)](https://doi.org/10.5281/zenodo.24166175)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0008--9155--4653-A6CE39.svg?logo=orcid&logoColor=white)](https://orcid.org/0009-0008-9155-4653)
+[![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Live%20Engine%20Demo-FFD21E)](https://huggingface.co/spaces/Juan778/KineTopus_Engine)
+
+🎬 **[Watch the YouTube Deep Dive](https://youtu.be/2g9QCzV2B4E)** &nbsp;·&nbsp; 📝 **[Read the Substack Post](https://substack.com/@juandiegoua778/note/p-225414681)** &nbsp;·&nbsp; 📄 **[Read the SSRN Paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018)**
+
+</div>
 
 ---
 
-## Visión de Producto y Norte Estratégico
+## 🧭 Why I Built KineTopus-Analyst (From Research Paper to Daily Radar)
 
-**KineTopus-Analyst** nace para llevar a la práctica las capacidades teóricas del paper científico de `KineTopus Engine`, transformándolo en un **servicio e indicador cuantitativo accionable** diseñado desde la perspectiva del cliente que lo consume.
+I started [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) with a question I couldn't shake while staring at market charts: when you zoom to the right scale, price paths often trace clean parabolas, exponential decays, and damped oscillations — *what if that wasn't pareidolia, but local differential equations temporarily masked by market noise?*
 
-### Los 5 Pilares de Calidad del Servicio
-- **Utilidad Real como Indicador Técnico:** Diagnóstico geométrico Multi-Lente simultáneo (`2000v` Cian, `1000v` Ámbar, `500v` Violeta) proyectando siempre `t+150`, ajuste explícito Curva-Precio (`R²`, `MAPE`), cono calibrado de integración simple EWMA (`P25–P75` y `P5–P95`), taxonomía humana de 5 estados, escenarios con probabilidad de primer toque (*first-passage*) y forense histórico CUSUM (más auditoría Walk-Forward OOS opcional con `--audit-oos`).
-- **Sencillez e Intuición:** Rigor físico por dentro, lectura clara y directa por fuera en segundos (`hero.png` limpio en portada + `report.html` interactivo con pestañas ejecutivas y técnicas).
-- **Comodidad (*Zero-Friction*):** Descarga única inteligente (`10y` con respaldo automático a `max`), auto-calibración (`k*`), *Autopilot 2D* por estabilidad numérica y flujo dual en 2 etapas sin fricción.
-- **Portabilidad y Ligereza:** Núcleo desacoplado, `Local-First` ($\le 16\text{ GB}$ RAM con tensores `np.float64` `C_CONTIGUOUS`) y preparado para viajar como CLI, paquete Python, JSON/NPZ/HTML autocontenido, MCP o indicador embebible.
-- **Accesibilidad:** Reportes HTML/Markdown autocontenidos offline sin barras técnicas opacas ni jerga de enums internos.
+Building the scientific engine proved the mathematical thesis (`FFT`, `C² Splines`, `CUSUM`, `SINDy`, `Euler-Maruyama`), yet it immediately revealed a second, equally important gap: **an equation sitting inside a research script doesn't help a trader, risk analyst, or fintech team make sense of a chart in 10 seconds.**
 
-### Segmentos Objetivo (`Targets`)
-1. **Analistas Técnicos, Traders e Inversores:** Radar estructural Multi-Lente para diagnosticar régimen, estiramiento frente a la curva y niveles probables en tres horizontes simultáneos.
-2. **Plataformas Financieras y Empresas B2B:** Integración portable (`confluence.json`, feeds JSON/API, widgets o reportes interactivos) para ecosistemas como *TradingView*, *Investing.com*, brókers y fintechs.
-3. **Público General:** Vitrina accesible y comprensible que demuestra el valor aplicado del motor matemático original.
+**KineTopus-Analyst** (`kinetopus_pro`) is the product and service layer built on top of that open-source core (`Apache-2.0`). Instead of forcing you to decipher raw differential equations or tune fragile black boxes, it runs **three simultaneous geometric lenses** (`2000`, `1000`, and `500` bars) locally on your machine, measures how tightly price tracks its underlying curve, flags structural CUSUM regime shifts, and delivers the answer wherever you work: an offline interactive HTML report, a `< 35 KB` embeddable SVG widget, a TradingView Pine Script v5 overlay, active alerts, a FastAPI micro-service, or an MCP server for AI agents.
+
+> *Same white-box computational physics inside. Immediate human clarity outside.*
 
 ---
 
-## Arquitectura Open-Core (`v0.4.0`)
+## 📊 Visual Showcase — Live Real-Data Output (`BTC-USD`, Daily)
 
-- **Núcleo Público (`kinetopus-engine`):** Transformación Discreto-a-Continuo (`FFT` + Splines $C^2$), detección de quiebres estructurales (`CUSUM`), descubrimiento simbólico de EDOs (`PySINDy` STLSQ) y base de modelado estocástico.
-- **Capa Propietaria (`kinetopus_pro` `v0.4.0`):**
-  - **Orquestador Multi-Lente Paralelo (`kinetopus_pro/multi_lens.py`):** Evalúa en paralelo (`ProcessPoolExecutor`) tres ventanas (`2000v` Cian Marea Estructural, `1000v` Ámbar Eje Principal y Escenarios, `500v` Violeta Pulso Táctico) sobre descarga única inteligente (`10y` con ampliación automática a `max`). Las 3 lentes proyectan **siempre `t+150` simultáneamente**, sin bloqueos ni vetos automáticos por `SINDy R²` u OOS.
-  - **Cono EWMA Calibrado, Curva-Precio y OOS Opcional (`kinetopus_pro/headless_pipeline.py`):** Cono Monte Carlo de integración simple en log-precio (`span=30` EWMA winsorizado por MAD, $N=2,000$ rutas `np.float64` `C_CONTIGUOUS`), métricas explícitas de ajuste Curva-Precio (`R²`, `MAPE`, `RMSE`), 3 escenarios probabilísticos centrados en `P25/P75`, solver espectral analítico `2x2`, rescate *Autopilot 2D* exclusivamente ante inestabilidad numérica o `dr/dt = 0`, test residual `Ljung-Box` y auditoría Walk-Forward OOS opcional (`--audit-oos`).
-  - **Renderizador Financiero (`kinetopus_pro/static_renderer.py`):** Gráfico Héroe (`hero.png` / `confluence.png`) con velas OHLC, 3 curvas y 3 proyecciones `t+150` simultáneas, cortes limpios de régimen y regla lateral sin solapes (erradicando barreras horizontales CUSUM de 1 vela en vistas ejecutivas), más **3 dashboards técnicos de 6 paneles** (`2000v / 1000v / 500v`) y **18 paneles individuales**.
-  - **Presentación Dual en Dos Etapas (`kinetopus_pro/report_builder.py`):** Etapa 1 persiste `report_bundle.npz` (100% del historial descargado) y genera `report.html` interactivo offline (`plotly.min.js` + Jinja2, Tema Oscuro/Claro, selectores de ventana, cono y los 3 dashboards) junto con `analysis.md`; Etapa 2 (`--render-report`) inyecta 100% de cifras del motor sobre el texto cualitativo de `narrative.json` en `< 0.5 s`.
-  - **Indicador Portable B2B, Alertas y Servicio API/MCP (`indicator_export.py`, `alerts.py`, `service.py`, `mcp_server.py`):** Exporta `indicator_feed.json` (`kinetopus.indicator.v1`, `~5–12 KB`), `widget.html` (`< 35 KB` SVG puro para `<iframe>`), `indicator.pine` (TradingView Pine Script v5 `overlay=true`), evalúa 6 reglas de alertas con deduplicación SHA-256 (`.alerts_ledger.json` + `--webhook-url`) y sirve endpoints HTTP (`FastAPI` + Portal Web en `kinetopus-serve`) y tools MCP (`kinetopus-mcp`).
-  - **CLI Reproducible (`kinetopus-analyze`) y Skill Agéntica:** Versionados con protocolo de cero alucinaciones numéricas en `.agent/skills/kinetopus-analyst/`.
+Below is an actual, unedited snapshot generated by running `kinetopus-analyze --ticker "BTC-USD" --interval 1d` (closing price `60,612 USD` on `2026-11-26`):
 
-## Mapa de Documentación
+![KineTopus-Analyst Multi-Lens Hero Chart for BTC-USD](docs/assets/btc_hero.png)
 
-- [docs/MANIFIESTO.md](docs/MANIFIESTO.md) — Visión de producto/servicio, pilares de calidad, targets y filtro norte.
-- [docs/ARCHITECTURE_PRO.md](docs/ARCHITECTURE_PRO.md) — Frontera Open-Core (`engine_bridge.py`), arquitectura geométrica `v0.3.1` y capa de servicio/indicador portable `v0.4.0`.
-- [docs/ROADMAP_PRO.md](docs/ROADMAP_PRO.md) — Hitos completados (`v0.1.0` → `v0.4.0` Hito 4) y próximo frente en Hito 3 (Escáner Multi-Activo/Multi-Serie).
+### How to Read This Chart in 15 Seconds
+1. **Three Simultaneous Scales (`2000v` · `1000v` · `500v`):**
+   - **Cyan (`2000v`):** The structural macro tide.
+   - **Amber (`1000v`):** The primary anchor axis powering executive ranges (`1w`, `1m`, `3m`, `t+150`) and the probabilistic cone.
+   - **Violet (`500v`):** The tactical short-term pulse emitting recent CUSUM break pins and velocity-reversal alerts.
+   - *All three lenses always project `t+150` simultaneously — no arbitrary predictive blackouts.*
+2. **Curve-to-Price Fit & Stretch:** When candlesticks trade far below or above a smooth curve (e.g., `-12.4%` below the `1000v` curve here), you see immediately whether the asset is overextended or coiling near equilibrium, alongside explicit `R²` and `MAPE` fit metrics.
+3. **Calibrated EWMA Cone (`P25–P75` & `P5–P95`):** Instead of distorting uncertainty with noisy double integration, `2,000` single-integration log-price paths scaled by RiskMetrics EWMA volatility (`span=30`, MAD-winsorized) frame realistic first-passage targets on the collision-free right ruler.
 
-## Instalación Local (Modo Editable Open-Core)
+<details>
+<summary>🔬 <strong>Inspect the 6-Panel Technical Laboratory (`1000v` Dashboard)</strong> — Click to expand</summary>
 
-```powershell
-# 1. Instalar librería científica pública en modo editable
-pip install --no-build-isolation --no-deps -e "..\KineTopus Engine"
+Each scale also exports a 6-panel laboratory dashboard (plus 18 standalone panel PNGs) detailing:
+1. Full window OHLC/close manifold + calibrated cone (`R² = 0.772`, `MAPE = 8.28%`).
+2. Tactical zoom (`120` recent bars + `t+150` projection).
+3. Return velocity (`dr/dt`) and zero-crossings.
+4. Return acceleration (`d²r/dt²`) and inflection points.
+5. 2D Return-Volume phase-space attractor (`V_z` vs. smoothed return) and orbital chirality.
+6. Full historical **CUSUM structural tension** (`S+ / S-` against threshold `H = 5.0`), kept clean and readable outside executive clutter.
 
-# 2. Instalar KineTopus-Analyst (incluye scripts kinetopus-analyze, kinetopus-serve y kinetopus-mcp)
-pip install --no-build-isolation --no-deps -e .
+![KineTopus 6-Panel Technical Dashboard for BTC-USD 1000v](docs/assets/btc_dashboard_1000v.png)
+
+</details>
+
+<details>
+<summary>🧩 <strong>Inspect the &lt; 35 KB Pure-SVG Embeddable Widget</strong> — Click to expand</summary>
+
+Designed for fintech portals, newsletters, and trading dashboards (`<iframe>`-ready at `< 35 KB`, zero `plotly.min.js` dependency, instant Dark/Light toggle, paired with `indicator_feed.json` and TradingView `indicator.pine`):
+
+![KineTopus Pure-SVG Widget Preview for BTC-USD](docs/assets/btc_widget_preview.svg)
+
+</details>
+
+---
+
+## ✨ What You Get (`v0.4.0`)
+
+| Layer | What It Delivers | Key Artifacts / Commands |
+| :--- | :--- | :--- |
+| **1. Pure-Geometric Multi-Lens Engine** | Parallel `2000v / 1000v / 500v` analysis over a single smart OHLCV fetch (`10y` with auto-`max` fallback), `Autopilot 2D` numerical rescue, finite exponential blow-up guard, `Ljung-Box` residual check & opt-in Walk-Forward OOS (`--audit-oos`). | `kinetopus-analyze --ticker "BTC-USD"` |
+| **2. Interactive Offline Two-Stage Reports** | 100% downloaded history persisted in `report_bundle.npz`; self-contained `report.html` (`plotly.min.js`, `[120v \| 500v \| 1000v \| 2000v \| Full History]`, cone & dashboard switchers, Dark/Light mode) + deterministic `--render-report` fusion with `narrative.json`. | `report.html`, `analysis.md`, `confluence.json` |
+| **3. Portable B2B Suite & Active Alerts** | Compact JSON contract (`kinetopus.indicator.v1`, `~5–12 KB`), `< 35 KB` pure-SVG `widget.html`, ready-to-paste **TradingView Pine Script v5** (`indicator.pine`), plus 6 deterministic alert rules with SHA-256 ledger deduplication & webhook dispatch. | `indicator_feed.json`, `widget.html`, `indicator.pine`, `alerts.json` |
+| **4. FastAPI Micro-Service & MCP Server** | Lightweight web portal & REST API (`kinetopus-serve`) protected by `threading.Lock` for `≤ 16 GB` RAM workstations, plus an agent-ready `stdio` MCP server (`kinetopus-mcp`). | `kinetopus-serve`, `kinetopus-mcp` |
+
+---
+
+## 🏗️ Open-Core Architecture
+
+**KineTopus-Analyst** keeps a strict decoupling boundary: `kinetopus_pro/engine_bridge.py` is the **only** module importing `kinetopus-engine` (`Apache-2.0`), leaving the upstream scientific core untouched.
+
+```mermaid
+flowchart LR
+    CORE["KineTopus-Engine (Apache-2.0)<br/>FFT · C² Splines · CUSUM · SINDy"] --> BRIDGE["kinetopus_pro/engine_bridge.py<br/>Open-Core Adapter"]
+    BRIDGE --> PIPE["Multi-Lens Geometric Engine<br/>2000v · 1000v · 500v + EWMA Cone"]
+    PIPE --> RPT["Offline Two-Stage Reports<br/>report.html · analysis.md · hero.png"]
+    PIPE --> B2B["Portable B2B & Alerts<br/>indicator_feed.json · widget.html · Pine v5 · Webhooks"]
+    B2B --> SVC["FastAPI Service & Web Portal<br/>kinetopus-serve"]
+    B2B --> MCP["AI Agent MCP Server<br/>kinetopus-mcp"]
 ```
 
-## Uso Rápido (CLI, Exportación Portable y Servicio HTTP / MCP)
+---
 
-```powershell
-# Etapa 1 (Cuantitativa pura — genera report.html + analysis.md + indicator_feed.json + widget.html + indicator.pine + alerts.json):
+## ⚡ Quick Start (100% Reproducible)
+
+**Requirements:** Python `3.10+` and up to `16 GB` RAM (Local-First vectorized `np.float64` `C_CONTIGUOUS` arrays).
+
+### 1. Install
+```bash
+# Install the open-source scientific core from GitHub
+pip install "git+https://github.com/JuanDie778/KineTopus-Engine.git"
+
+# Clone and install KineTopus-Analyst (including FastAPI + MCP service extras & pytest)
+git clone https://github.com/JuanDie778/KineTopus-Analyst.git
+cd KineTopus-Analyst
+pip install -e ".[service,dev]"
+```
+
+<details>
+<summary>💡 <strong>Developing with a sibling local clone of KineTopus-Engine?</strong></summary>
+
+`engine_bridge.py` automatically resolves a sibling `../KineTopus-Engine` directory or the `KINETOPUS_ENGINE_DIR` environment variable if `kinetopus-engine` is not pip-installed globally.
+
+</details>
+
+### 2. Run Your First Multi-Lens Analysis
+```bash
+# Standard Pure-Geometric 3-Lens run (generates report.html, hero.png, widget.html, Pine v5 & alerts)
 kinetopus-analyze --ticker "BTC-USD" --interval 1d
 
-# Analizar CSV local o activar auditoría Walk-Forward OOS opcional:
-python -m kinetopus_pro.cli --csv "datos.csv" --interval 1d
-python -m kinetopus_pro.cli --ticker "BTC-USD" --interval 1d --audit-oos
+# Optional: run strict out-of-sample Walk-Forward audit on top of live geometry
+kinetopus-analyze --ticker "SPY" --interval 1d --audit-oos
 
-# Etapa 2 (Re-renderizado instantáneo <0.5 s fusionando narrativa cualitativa en narrative.json):
-python -m kinetopus_pro.cli --render-report "reports/<TICKER>/<TIMESTAMP>"
+# Refresh portable B2B artifacts & dispatch new deduplicated alerts to a webhook (< 0.2 s)
+kinetopus-analyze --export-portable "reports/BTC-USD/<TIMESTAMP>" --webhook-url "https://hooks.example.com/..."
+```
 
-# Exportar/actualizar únicamente artefactos portables B2B y alertas (<0.2 s) + webhook opcional:
-python -m kinetopus_pro.cli --export-portable "reports/<TICKER>/<TIMESTAMP>" --webhook-url "https://hooks.example.com/..."
-
-# Levantar Portal Web Ligero + API REST B2B (http://127.0.0.1:8000) o Servidor MCP stdio:
+### 3. Launch the HTTP Portal / API or MCP Server
+```bash
+# Lightweight Web Portal & B2B REST API at http://127.0.0.1:8000
 kinetopus-serve --host 127.0.0.1 --port 8000
+
+# stdio MCP server for AI assistants (list_analyzed_assets, get_asset_indicator, get_asset_alerts, get_tradingview_pine)
 kinetopus-mcp
 ```
 
-Los artefactos auditables se guardan en `reports/<TICKER>/<TIMESTAMP>/`: `confluence.json`, `report_bundle.npz`, `hero.png` (`confluence.png`), `report.html`, `analysis.md`, `indicator_feed.json`, `widget.html`, `indicator.pine`, `alerts.json`, `narrative_template.json` y `lens_{2000,1000,500}/` (`telemetry.json`, `dashboard.png`, `panels/01..06_*.png`).
-
-## Tests de Auditoría
-
-```powershell
+### 4. Run the Offline Verification Suite
+```bash
 pytest tests/ -v -W ignore::UserWarning
 ```
+
+---
+
+## 📚 Documentation & Roadmap (`v0.5.0` Next)
+
+| Topic | English | Español |
+| :--- | :--- | :--- |
+| **Product Manifesto & North Star** | [docs/en/MANIFESTO.md](docs/en/MANIFESTO.md) | [docs/MANIFIESTO.md](docs/MANIFIESTO.md) |
+| **Open-Core Architecture (`v0.4.0`)** | [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md) | [docs/ARCHITECTURE_PRO.md](docs/ARCHITECTURE_PRO.md) |
+| **Roadmap (`v0.5.0` Multi-Asset Scanner Next)** | [docs/en/ROADMAP.md](docs/en/ROADMAP.md) | [docs/ROADMAP_PRO.md](docs/ROADMAP_PRO.md) |
+| **Release History & Security Policy** | [CHANGELOG.md](CHANGELOG.md) | [SECURITY.md](SECURITY.md) |
+
+**Coming Next — Milestone 3 (`v0.5.0` Multi-Asset & Multi-Series Scanner):** Batch sweeps across mixed Yahoo Finance tickers and local CSVs (including non-financial `(X, Y)` coupled dynamical systems with zeros/negatives under `--classic-price`), exporting deterministic `JSON/CSV` master tables directly into `service.py`.
+
+---
+
+## ⚖️ License, Commercial Use & Citation
+
+**KineTopus-Analyst** is released under the [**KineTopus-Analyst Source-Available Non-Commercial Evaluation License**](LICENSE):
+- ✅ **Permitted:** View, clone, study, and run locally for **personal, educational, technical evaluation, or non-commercial academic research**.
+- ❌ **Restricted without Commercial License:** Commercial trading/advisory products, SaaS/API hosting for third parties, paid signal feeds, or commercial redistribution/embedding.
+- 🔓 **Upstream Open-Core:** Powered by [`KineTopus-Engine`](https://github.com/JuanDie778/KineTopus-Engine), which remains **100% Apache-2.0** (see [NOTICE](NOTICE)).
+
+**Commercial / B2B Licensing & Inquiries:** Contact **Juan Diego Ussa Aponte** at [ussaapontejuandiego@gmail.com](mailto:ussaapontejuandiego@gmail.com) or [@JuanDie778](https://github.com/JuanDie778).
+
+<details>
+<summary>🎓 <strong>Cite the Underlying Scientific Research (BibTeX)</strong></summary>
+
+```bibtex
+@misc{ussa2026kinetopus,
+  author       = {Ussa Aponte, Juan Diego},
+  title        = {Kinetopus Engine: A Parsimonious Physical-Mathematical Pipeline for Local-First Financial Time Series Forecasting using Sparse Identification of Dynamical Systems (SINDy)},
+  year         = {2026},
+  doi          = {10.5281/zenodo.24166175},
+  url          = {https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018}
+}
+```
+
+</details>
+
+> ⚠️ **Disclaimer:** *KineTopus-Analyst is a computational physics and quantitative research software package. None of its outputs, charts, indicators, alerts, or projections constitute financial, investment, or trading advice.*

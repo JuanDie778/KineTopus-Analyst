@@ -507,3 +507,34 @@ def test_autopilot_2d_skips_low_sindy_r2_and_triggers_on_instability(monkeypatch
     assert res_zero.telemetry["forecast_cone"]["geometric_fallback_used"] is True
     assert len(res_zero.arrays["det_price_path"]) == 150
     assert np.all(np.isfinite(res_zero.arrays["det_price_path"]))
+
+
+def test_ensure_geometric_projection_catches_finite_exponential_blowup():
+    """Verifica que una explosión exponencial finita (ej. 1e201) dispare el respaldo geométrico."""
+    from kinetopus_pro.headless_pipeline import KinetopusHeadlessPipeline
+
+    last_price = 60615.76
+    horizon = 150
+    t_raw = 500.0 + np.arange(1, horizon + 1, dtype=np.float64)
+    blowup_prices = last_price * np.exp(np.linspace(0.01, 450.0, horizon, dtype=np.float64))
+    assert np.all(np.isfinite(blowup_prices))
+    assert float(np.max(blowup_prices)) > 1e100
+
+    det_t, det_p, fallback_used = KinetopusHeadlessPipeline._ensure_geometric_projection(
+        last_price=last_price,
+        raw_det_t=t_raw,
+        raw_det_prices=blowup_prices,
+        horizon_steps=horizon,
+        dt_val=1.0,
+        t_end=500.0,
+        r_smooth=np.array([0.002, 0.0015], dtype=np.float64),
+        r_dot=np.array([0.0, 0.0], dtype=np.float64),
+        unstable_flag=False,
+        empty_r_eq=False,
+        disable_returns=False,
+    )
+    assert fallback_used is True
+    assert len(det_t) == horizon and len(det_p) == horizon
+    assert np.all(np.isfinite(det_p))
+    assert float(np.max(det_p)) < last_price * 10.0
+    assert float(np.min(det_p)) > last_price * 1e-4

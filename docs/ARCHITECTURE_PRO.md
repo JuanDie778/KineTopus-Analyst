@@ -1,7 +1,9 @@
-# ARQUITECTURA OPEN-CORE — KINETOPUS-PRO (`v0.4.0` · Geometría Pura + Servicio & Indicador Portable)
+🌐 **Español** | [English](en/ARCHITECTURE.md)
 
-## 1. Frontera de Desacoplamiento (`engine_bridge.py`) y Propiedad del Repositorio
-`KineTopus-Analyst` (`kinetopus_pro`) consume el motor científico `kinetopus-engine` exclusivamente a través de `kinetopus_pro/engine_bridge.py`, manteniendo el repositorio base 100% intacto:
+# ARQUITECTURA OPEN-CORE — KINETOPUS-ANALYST (`v0.4.0` · Geometría Pura + Servicio & Indicador Portable)
+
+## 1. Frontera de Desacoplamiento (`engine_bridge.py`)
+`KineTopus-Analyst` (`kinetopus_pro`) consume el motor científico público [`kinetopus-engine`](https://github.com/JuanDie778/KineTopus-Engine) (`Apache-2.0`) exclusivamente a través de `kinetopus_pro/engine_bridge.py`, manteniendo el repositorio base 100% intacto:
 
 - **Dependencias Upstream (`kinetopus-engine`):**
   - `src.ui.market_loader.MarketLoader`
@@ -11,8 +13,7 @@
   - `src.quant_engine.physics.PhysicsDiscoverer`
   - `src.quant_engine.symbolic.SymbolicTranslator`
   - `src.quant_engine.auto_tuner.CUSUMAutoTuner`
-- **Aislamiento de Namespace y Salida Estándar:** El paquete propietario reside en `kinetopus_pro/`, coexistiendo editable (`pip install -e`) sin colisiones con `src/`. Cualquier diagnóstico impreso por módulos *upstream* se redirige a `stderr` para preservar la pureza JSON en `stdout` del CLI.
-- **Límite de Propiedad:** La ingeniería del producto cubre exclusivamente `kinetopus_pro/`, `docs/`, `README.md` y `tests/`; nunca se modifican archivos de `..\KineTopus Engine` ni carpetas externas de investigación (`research/`).
+- **Aislamiento de Namespace y Salida Estándar:** El paquete `kinetopus_pro/` consume `kinetopus-engine` como dependencia externa (vía `pip install` o resolviendo `KINETOPUS_ENGINE_DIR` / clon hermano `../KineTopus-Engine`) sin colisiones con `src/` y sin modificar el código fuente *upstream*. Cualquier diagnóstico impreso por módulos *upstream* se redirige a `stderr` para preservar la pureza JSON en `stdout` del CLI.
 
 ---
 

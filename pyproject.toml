@@ -5,10 +5,36 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kinetopus-pro"
 version = "0.4.0"
-description = "KineTopus-Pro: Pure Geometric Multi-Lens Regime Radar, Portable B2B Indicator Feed, <35 KB SVG Widget, Pine Script v5, Active Alerts & FastAPI/MCP Service"
+description = "KineTopus-Analyst: Pure-Geometric Multi-Lens Regime Radar, Portable B2B Indicator Feed, <35 KB SVG Widget, Pine Script v5, Active Alerts & FastAPI/MCP Service"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary - All Rights Reserved" }
+license = { file = "LICENSE" }
+authors = [{ name = "Juan Diego Ussa Aponte", email = "ussaapontejuandiego@gmail.com" }]
+keywords = [
+    "quantitative-finance",
+    "econophysics",
+    "sindy",
+    "cusum",
+    "splines",
+    "regime-detection",
+    "tradingview",
+    "pine-script",
+    "fastapi",
+    "mcp",
+    "white-box",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = [
     "kinetopus-engine>=2.0.0",
     "matplotlib>=3.7.0",
@@ -25,6 +51,14 @@ service = [
     "httpx>=0.26.0",
     "mcp>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/JuanDie778/KineTopus-Analyst"
+Repository = "https://github.com/JuanDie778/KineTopus-Analyst"
+Issues = "https://github.com/JuanDie778/KineTopus-Analyst/issues"
+"Upstream Engine" = "https://github.com/JuanDie778/KineTopus-Engine"
+"Paper (SSRN)" = "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018"
+"Zenodo DOI" = "https://doi.org/10.5281/zenodo.24166175"
 
 [project.scripts]
 kinetopus-analyze = "kinetopus_pro.cli:main"

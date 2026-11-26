@@ -1,0 +1,23 @@
+name: Feature Request
+description: Propose a new capability, integration, or indicator improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every feature in **KineTopus-Analyst** is evaluated against our Product Manifesto: real utility as a technical/quantitative indicator, clarity & intuition, zero-friction usability, portability, and accessibility.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: Who benefits (analyst/trader, B2B platform, researcher) and what friction does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the CLI flag, API endpoint, indicator field, or report improvement you envision.
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Commercial / B2B Licensing & Partnerships
+    url: mailto:ussaapontejuandiego@gmail.com?subject=KineTopus-Analyst%20Commercial%20Licensing
+    about: Inquiries for commercial deployment, SaaS/API hosting, TradingView/fintech embedding, or custom feeds.
+  - name: Upstream Scientific Core (KineTopus-Engine)
+    url: https://github.com/JuanDie778/KineTopus-Engine/issues
+    about: Issues strictly related to the underlying Apache-2.0 scientific core (`src.quant_engine`).

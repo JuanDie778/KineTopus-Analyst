@@ -1,12 +1,14 @@
+🌐 **Español** | [English](en/ROADMAP.md)
+
 # ROADMAP DE PRODUCTO — KINETOPUS-ANALYST (`kinetopus_pro`)
 
 > **Norte Estratégico:** Toda iteración de este roadmap se rige por [docs/MANIFIESTO.md](MANIFIESTO.md) (utilidad real como indicador técnico, sencillez e intuición, comodidad, portabilidad y accesibilidad).
 
-## Hito 1: Base Headless, CLI Estandarizado y Skill Agéntica
+## Hito 1: Base Headless, CLI Estandarizado y Protocolo Reproducible
 **Estado:** ✅ COMPLETADO (`v0.1.0`)
 - Orquestador *headless* (`kinetopus_pro/headless_pipeline.py`) con normalización local sin fuga temporal, Autopilot 2D, Doble Sello (`Ljung-Box` + Mini Walk-Forward causal OOS), geometría cinemática y forense CUSUM.
 - Renderizador estático oscuro de 5 paneles (`kinetopus_pro/static_renderer.py`).
-- CLI instalable (`kinetopus-analyze` / `kinetopus_pro.cli`) y Skill `.agent/skills/kinetopus-analyst/SKILL.md` validada en corrida real (`BTC-USD`, `R² = 0.9217`, detección de `Alerta Caso GLD` con `40.0%` HR OOS).
+- CLI instalable (`kinetopus-analyze` / `kinetopus_pro.cli`) y protocolo reproducible de cero alucinaciones numéricas validado en corrida real (`BTC-USD`, `R² = 0.9217`, detección de `Alerta Caso GLD` con `40.0%` HR OOS).
 
 ---
 
@@ -26,7 +28,7 @@
 ---
 
 ## Hito 2.6: Enfoque Geométrico Puro y 3 Lentes `t+150` Simultáneas
-**Estado:** ✅ COMPLETADO (`v0.3.1`, commit `050ceb3`, tag `v0.3.1`)
+**Estado:** ✅ COMPLETADO (`v0.3.1`)
 - **Walk-Forward OOS Opcional (`--audit-oos`) y Cero Bloqueos:** Walk-Forward desactivado por defecto (`audit_oos=False`); eliminados el veto `"Sin escenario predictivo validado hoy"` y los cortes por `SINDy R² < 0.35`. *Autopilot 2D* solo interviene ante inestabilidad numérica o colapso `dr/dt = 0`.
 - **Proyección Simultánea `t+150` en las 3 Lentes y Ajuste Curva-Precio:** `2000v` (Cian), `1000v` (Ámbar, eje principal de escenarios `P25/P75`) y `500v` (Violeta) proyectan siempre `t+150` simultáneamente, reportando ajuste explícito `curve_price_fit` (`window_price_r2`, `mape_pct`, `rmse_price`).
 - **Historial 100% en `report_bundle.npz` y Selectores Interactivos:** Almacena la serie descargada completa (`h_start=0`), vista inicial `500v + t+150`, botones `[120v | 500v | 1000v | 2000v | Todo el historial]`, selector `[Cono: 1000v | 2000v | 500v | Sin cono]`, auto-escalado Y limpio y selector de los **3 dashboards técnicos** en Tab 3.
