@@ -1994,8 +1994,11 @@ class KinetopusHeadlessPipeline:
 
         df_cols_norm = {str(c).title(): c for c in df.columns}
         if "Volume" in df_cols_norm:
-            vol_raw_full = np.ascontiguousarray(
-                df[df_cols_norm["Volume"]].ffill().bfill().values, dtype=np.float64
+            vol_raw_full = np.array(
+                df[df_cols_norm["Volume"]].ffill().bfill().to_numpy(dtype=np.float64, copy=True),
+                dtype=np.float64,
+                copy=True,
+                order="C",
             )
             vol_raw_full[vol_raw_full == 0] = 1e-8
         else:
