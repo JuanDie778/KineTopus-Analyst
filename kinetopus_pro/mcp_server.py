@@ -10,7 +10,10 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ModuleNotFoundError:
+    from mcp.server.mcpserver import MCPServer as FastMCP  # type: ignore[import-not-found,no-redef]
 
 from kinetopus_pro.service import KinetopusReportStore
 
