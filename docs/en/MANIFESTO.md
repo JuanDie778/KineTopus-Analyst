@@ -2,73 +2,49 @@
 
 # PROJECT MANIFESTO: KINETOPUS-ANALYST
 
-> **Product North Star:** Turn the Computational Financial Physics theory behind [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) into a **real, useful, intuitive, portable, and accessible quantitative service and indicator** for technical analysts, financial platforms, and curious minds everywhere.
+> **Product North Star:** Turn the computational physics of [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) into a **2D Phase-Space Attractor Microscope and risk-navigation instrument** — intuitive, portable, and epistemically honest — built to reveal the internal market dynamics that flat 1D price charts hide.
 
 ---
 
-## 1. Purpose & Product North Star (`From Scientific Paper to Live Service`)
+## 1. Core Purpose & Central Discovery (`From 1D Shadows to a 2D Microscope`)
 
 **KineTopus-Analyst** (`kinetopus_pro`) is the product and service layer built under an Open-Core architecture on top of the open-source scientific core [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) ([SSRN Preprint 7431018](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018) · [Zenodo DOI](https://doi.org/10.5281/zenodo.24166175), `Apache-2.0`).
 
-While `KineTopus-Engine` demonstrates in academia that financial time series conceal continuous dynamics discoverable via **FFT**, **$C^2$ Splines**, **CUSUM**, symbolic ODE discovery (**SINDy**), and stochastic integration (**Euler-Maruyama**), **KineTopus-Analyst** exists for a distinct and complementary mission:
+While early milestones focused on multi-scale 1D price extrapolation, **Gran Estudio v3 (`26,294` causal snapshots across `27` series, `2000–2026`, including `15` untouched blind markets)** revealed where KineTopus delivers unmistakable practical value: **opening the second dimension (`X-axis = Normalized Volume Vz`, `Y-axis = Smoothed Return %`) via the 2D Phase-Space Attractor without ever peeking at future data.**
 
-* **Prove practical applicability and tangible value:** Bring the engine out of the research notebook and turn it into a tool that solves real decision-making needs in live markets.
-* **Operate as a service powered by KineTopus-Engine:** Translate differential equations, derivatives, and phase-space attractors into clean, actionable readings that an analyst, investor, or external platform can consume effortlessly.
-
----
-
-## 2. Customer-First Product Mindset (`Think Like the Consumer of the Service`)
-
-Every technical, visual, and integration decision in this repository is designed **from the perspective of the end user consuming the service**.
-
-Mathematical rigor is necessary, never sufficient. A quantitative product creates genuine adoption only when it clearly answers the user's operational questions:
-1. **Is this asset currently governed by its own physical inertia, or dominated by exogenous noise and shocks?**
-2. **Is the prevailing trajectory accelerating, exhausting, or approaching a kinematic turning point?**
-3. **Where exactly do the mathematical regimes break or shift?**
-
-If a calculation does not improve clarity or forces the reader to decode unnecessary jargon, the product is not finished yet.
+Rather than pretending to be a crystal ball for distant price targets, **KineTopus-Analyst** exists to answer three structural questions that classic 1D indicators (`OBV`, `CMF`, `AR(1)`) cannot see:
+1. **Who is holding the wheel (`Lz`)?** Does the market orbit **counterclockwise (`Lz > 0`)** — patient accumulation where volume enters before price moves, like the `S&P 500` (`79%`) — or **clockwise (`Lz < 0`)** — reactive trend-chasing where price jumps first, like `Bitcoin` (`33%`), `Gold` (`36%`), or `Tesla` (`39%`)?
+2. **Is the orbit trapped or escaping (`Fitzgibbon`)?** Does it trace a **closed ellipse** (`3x` more stable in `100%` of `25/25` daily markets) or open into an **escape hyperbola**?
+3. **How much internal fragility is building (`Re(λ)`)?** Does local Lyapunov instability (`Re(λ) > +0.010 d⁻¹`) detect structural vulnerability ahead of sharp sell-offs (`ROC-AUC = 0.603` vs `0.473` for `Scheffer AR(1)` across `166` severe drops) so exposure can be dialed back in time?
 
 ---
 
-## 3. Service Quality Standards (The 5 Pillars)
+## 2. Service Quality Standards (The 5 Pillars)
 
-**KineTopus-Analyst** holds itself to five non-negotiable engineering and design standards:
-
-1. **Real Utility as a Technical Indicator:**
-   * Serve as a genuinely useful structural indicator and regime radar for technical analysis and portfolio monitoring (multi-lens regime state, kinematic inflection zones, CUSUM regime breaks, and calibrated $P_5\text{–}P_{95}$ cones), elevating traditional charting with objective, non-discretionary geometry.
+1. **Real Utility as a Risk-Navigation Instrument:**
+   * Serve as a live phase-space diagnostic panel and fragility thermometer for open positions (hold calmly while a stable counterclockwise ellipse absorbs pullbacks; cut risk/leverage in half when rotation flips clockwise and the orbit opens into red instability — reducing max drawdown across `8/8` crypto assets), paired with causal `CUSUM` break detection.
 2. **Simplicity & Intuition:**
-   * Mathematical sophistication inside; immediate readability outside.
-   * Visual outputs and summaries must be legible in seconds without requiring a background in differential equations.
+   * Differential rigor (`C² Splines`, `SINDy`, `Fitzgibbon`, `Lyapunov`) inside; a clean four-season orbital reading outside that anyone can grasp in seconds.
 3. **Zero-Friction Comfort:**
-   * Plug-and-play workflow: automatic CUSUM drift calibration (`k*`), *Autopilot 2D* numerical stability rescue, optional out-of-sample Walk-Forward auditing, and reproducible reporting in a single command.
+   * Reproducible *Local-First* CLI workflow (`kinetopus-analyze`) with automatic drift tuning (`CUSUMAutoTuner`), *Autopilot 2D* numerical rescue, and offline interactive reports.
 4. **Portability & Lightweight Design:**
-   * Decoupled architecture (`Local-First`, memory-bounded for $\le 16\text{ GB}$ RAM machines), engineered to travel cleanly as a CLI, Python package, JSON/NPZ/HTML self-contained artifact, HTTP API, MCP server, TradingView Pine Script overlay, or `< 35 KB` embeddable widget.
+   * Decoupled `≤ 16 GB` RAM architecture (`np.float64` `C_CONTIGUOUS`) engineered to travel seamlessly as a CLI, self-contained `report.html`, compact JSON feed (`kinetopus.indicator.v1`), `< 35 KB` SVG widget, TradingView Pine Script v5 overlay, `FastAPI` service, and `MCP` server.
 5. **Accessibility:**
-   * Technically and cognitively approachable across delivery channels and experience levels, removing both infrastructure and interpretation barriers.
+   * Turn complex dynamical systems into clear, visual telemetry approachable by practitioners, engineers, and curious minds alike.
 
 ---
 
-## 4. Target Audiences (`Targets`)
+## 3. Target Audiences (`Targets`)
 
-The service serves three complementary segments:
-
-* **Technical Analysts, Traders & Investors:**
-  * Independent and professional market participants seeking an emotion-free regime radar to assess trend health, stretch vs. underlying geometry, and probabilistic cones across three time scales simultaneously.
-* **Financial Platforms & B2B Partners (*TradingView*, *Investing.com*, Brokers, Terminals, Fintechs):**
-  * Integrate `KineTopus-Engine` intelligence via lightweight JSON contracts (`kinetopus.indicator.v1`), embeddable `< 35 KB` SVG widgets, Pine Script overlays, and FastAPI/webhook telemetry.
-* **General Public & Applied Science Showcase:**
-  * An open, visual showcase proving how theoretical computational physics research can become practical everyday software.
+* **Quantitative Analysts, Portfolio Managers & Traders:** A 2D risk microscope to separate patient accumulation from reactive chasing and modulate exposure when internal fragility spikes.
+* **Financial Platforms & B2B Integrators:** Phase-space telemetry, `< 35 KB` vector widgets, deduplicated alerts, and HTTP/MCP feeds ready to embed in brokers, fintechs, and research portals.
+* **Scientific & Applied Finance Community:** An open, audited showcase proving on `26,294` real historical snapshots what continuous phase-space geometry reveals beyond flat 1D charts.
 
 ---
 
-## 5. Unbreakable Governance Principles (Science + Product)
+## 4. Epistemic Honesty & Explicit Boundaries
 
-1. **Epistemic Honesty Over Over-Trading:**
-   * Expose Curve-to-Price fit (`R²`, `MAPE`), residual diagnostics (`Ljung-Box`), historical regime breaks (`CUSUM`), and optional Walk-Forward OOS audits (`--audit-oos`) transparently without hiding uncertainty.
-2. **White-Box Without Hallucinations:**
-   * Zero opaque black boxes and zero fabricated numbers. Every price, band, touch probability, and equation metric is computed and injected deterministically by the engine.
-3. **Development North-Star Filter:**
-   * Before designing or shipping any feature, every change must pass three checks:
-     1. *Does it add direct utility for the analyst, investor, platform, or reader?*
-     2. *Does it make the service simpler, more intuitive, and zero-friction?*
-     3. *Does it preserve or improve portability and accessibility?*
+A serious scientific instrument proves its rigor by clearly stating what it **cannot** see:
+1. **Not a crystal ball for exogenous shocks:** Ahead of the COVID crash (`February 12, 2020`), the `S&P 500` traced a calm green ellipse because no internal order-book fracture existed yet. The microscope measures endogenous capital fragility; it never predicts a virus or surprise macro headline.
+2. **Respect for spline boundary horizons:** Cubic spline `not-a-knot` boundaries only preserve reliable curvature for a few free days ahead, never across many weeks. The core value lies in **live 2D attractor diagnostics and stability**, not long-range deterministic price prophecies.
+3. **Complementarity in prolonged crises (`2008`):** Slow trend/volatility rules (`SMA-200`, `VolTarget`) still protect better as standalone allocation rules in multi-year bear markets; the 2D microscope shines as a **local seismograph and risk modulator**.

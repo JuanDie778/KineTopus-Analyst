@@ -2,11 +2,11 @@
 
 <div align="center">
 
-# 🔭 KineTopus-Analyst (`v0.4.0`)
+# 🔭 KineTopus-Analyst
 
-**Geometría de Mercado Multi-Lente de Caja Blanca, Suite Portable B2B (Widget SVG `< 35 KB`, TradingView Pine Script v5, Alertas Activas) y Micro-Servicio FastAPI / MCP**
+**La Segunda Dimensión del Dinero: Un Microscopio Físico de Caja Blanca del Atractor de Fase 2D en los Mercados**
 
-*Convirtiendo las ecuaciones diferenciales de Física Computacional Financiera en un radar cuantitativo intuitivo, reproducible y Local-First.*
+*Construido sobre [`KineTopus-Engine`](https://github.com/JuanDie778/KineTopus-Engine) (`Apache-2.0`) · Validado en `26,294` instantáneas causales reales (`2000–2026`)*
 
 [![CI](https://github.com/JuanDie778/KineTopus-Analyst/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanDie778/KineTopus-Analyst/actions/workflows/ci.yml)
 [![Release v0.4.0](https://img.shields.io/badge/Release-v0.4.0-0ea5e9.svg)](https://github.com/JuanDie778/KineTopus-Analyst/releases/tag/v0.4.0)
@@ -19,152 +19,160 @@
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0008--9155--4653-A6CE39.svg?logo=orcid&logoColor=white)](https://orcid.org/0009-0008-9155-4653)
 [![Hugging Face Space](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo%20del%20Motor-FFD21E)](https://huggingface.co/spaces/Juan778/KineTopus_Engine)
 
-🎬 **[Ver el Video en YouTube](https://youtu.be/2g9QCzV2B4E)** &nbsp;·&nbsp; 📝 **[Leer el Post en Substack](https://substack.com/@juandiegoua778/note/p-225414681)** &nbsp;·&nbsp; 📄 **[Leer el Paper en SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018)**
+🎬 **[Ver el Video de 5 Minutos en YouTube](https://youtu.be/2g9QCzV2B4E)** &nbsp;·&nbsp; 📝 **[Leer el Ensayo Completo en Substack](https://substack.com/@juandiegoua778/note/p-225414681)** &nbsp;·&nbsp; 📄 **[Leer el Paper en SSRN](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7431018)**
 
 </div>
 
 ---
 
-## 🧭 Por qué creé KineTopus-Analyst (Del Paper Científico al Radar Diario)
+## 🌀 La Ilusión de la Sombra 1D
 
-Empecé [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) con una duda que no me dejaba en paz mirando gráficos financieros: cuando observas una serie de precios en la escala correcta, muchos tramos dibujan parábolas, decaimientos exponenciales u oscilaciones amortiguadas casi de libro — *¿y si no fuera una ilusión óptica del ojo humano, sino ecuaciones diferenciales locales ocultas temporalmente bajo el ruido?*
+Mira dos subidas reales del mercado cara a cara: el **S&P 500** sube un `+25%`, **Bitcoin** sube un `+29%`, y abajo su volumen acumulado (`OBV`) parece casi idéntico. En cualquier pantalla de bolsa de los últimos sesenta años, contarían exactamente la misma historia.
 
-Construir el motor científico demostró la tesis matemática (`FFT`, `Splines C²`, `CUSUM`, `SINDy`, `Euler-Maruyama`), pero enseguida dejó ver el siguiente reto igual de importante: **una ecuación encerrada en un script de investigación no le sirve a un analista, inversor o plataforma fintech que necesita diagnosticar un activo en 10 segundos.**
+**Pero si giramos la cámara hacia la segunda dimensión, aparece esto:**
 
-**KineTopus-Analyst** (`kinetopus_pro`) es la capa de producto y servicio construida en arquitectura Open-Core sobre ese motor público (`Apache-2.0`). En lugar de obligarte a descifrar ecuaciones diferenciales crudas o pelear con cajas negras opacas, evalúa **tres lentes geométricas simultáneas** (`2000`, `1000` y `500` velas) en tu propio equipo, mide con transparencia qué tan bien sigue el precio a su curva, detecta quiebres estructurales CUSUM y entrega el diagnóstico listo para consumir donde tú trabajes: reporte HTML interactivo offline, widget SVG embebible `< 35 KB`, indicador Pine Script v5 en TradingView, alertas activas, API FastAPI o servidor MCP para agentes de IA.
+![Comparativa 1D vs plano 2D de KineTopus: S&P 500 gira antihorario mientras Bitcoin gira horario](docs/assets/anim_01_la_ilusion_de_la_sombra.gif)
 
-> *La misma física computacional de caja blanca por dentro. Lectura humana directa por fuera.*
+**Están girando en sentidos opuestos.** Los indicadores clásicos en 1D aplastan dos fuerzas dinámicas en una sola línea — igual que dos trompos girando al revés cuyas sombras en la pared dibujan el mismo vaivén plano.
+
+<div align="center">
+
+[![Ver La Segunda Dimensión del Dinero en YouTube](docs/assets/thumbnail_youtube.png)](https://youtu.be/2g9QCzV2B4E)
+
+*👆 Haz clic en la miniatura para ver el recorrido completo en [YouTube](https://youtu.be/2g9QCzV2B4E), o profundiza en todas las notas metodológicas en el [Ensayo de Substack](https://substack.com/@juandiegoua778/note/p-225414681).*
+
+</div>
 
 ---
 
-## 📊 Vitrina Visual Real — Salida en Vivo (`BTC-USD`, Diario)
+## 🔬 De Galileo al Microscopio de Espacio de Fases 2D
 
-Esta es una captura real, sin edición manual, generada al ejecutar `kinetopus-analyze --ticker "BTC-USD" --interval 1d` (cierre `60,612 USD` el `2026-11-26`):
+Imagina grabar a pulso una piedra cayendo desde un balcón. Si restas un fotograma menos el anterior para medir la velocidad, el temblor de tu mano destruye la física en dientes de sierra. Pero si trazas primero una **curva continua sin mirar jamás el futuro**, emerge intacta una ley exacta: `9.8 m/s²`.
 
-![Gráfico Héroe Multi-Lente de KineTopus-Analyst para BTC-USD](docs/assets/btc_hero.png)
+Así opera [**KineTopus-Engine**](https://github.com/JuanDie778/KineTopus-Engine) por dentro (`FFT` → `Splines C²` causales → quiebres `CUSUM` → EDOs dispersas con `SINDy`). Y al ejecutar el **Gran Estudio v3 (`26,294` instantáneas causales entre `2000 y 2026`, con parámetros congelados y cero fuga de futuro)** descubrimos su aplicación práctica más potente: **enfrentar el volumen normalizado (`Eje X = Vz`) contra el retorno suavizado (`Eje Y`) en un Atractor de Fase 2D**.
 
-### Cómo leer este gráfico en 15 segundos
-1. **Tres Escalas Simultáneas (`2000v` · `1000v` · `500v`):**
-   - **Cian (`2000v`):** La marea estructural de largo plazo.
-   - **Ámbar (`1000v`):** El eje principal que alimenta los rangos ejecutivos (`1s`, `1m`, `3m`, `t+150`) y el cono probabilístico.
-   - **Violeta (`500v`):** El pulso táctico de corto plazo que emite pines de quiebre CUSUM recientes y giros de velocidad.
-   - *Las tres lentes proyectan siempre `t+150` de forma simultánea, sin bloqueos predictivos arbitrarios.*
-2. **Ajuste Curva-Precio y Estiramiento:** Cuando las velas cotizan muy por encima o por debajo de su curva suave (por ejemplo, `-12.4%` descolgado bajo la lente `1000v`), ves al instante si el precio está sobreextendido o regresando hacia su variedad, acompañado siempre por sus métricas explícitas `R²` y `MAPE`.
-3. **Cono EWMA Calibrado (`P25–P75` y `P5–P95`):** En lugar de inflar el ruido por doble integración, `2,000` trayectorias de integración simple en log-precio escaladas por volatilidad EWMA RiskMetrics (`span=30`, winsorizada por MAD) dibujan objetivos realistas de primer toque en la regla derecha libre de solapes.
+La línea plana se abre en una órbita viva con **cuatro estaciones claras**:
+1. **Cuadrante IV (abajo a la derecha):** Entra volumen silencioso con el precio aún frío.
+2. **Cuadrante I (arriba a la derecha):** El retorno acelera cuando el consenso acompaña.
+3. **Cuadrante II (arriba a la izquierda):** El volumen se retira mientras el precio sigue por inercia.
+4. **Cuadrante III (abajo a la izquierda):** El mercado descansa y enfría excesos.
 
-<details>
-<summary>🔬 <strong>Explorar el Laboratorio Técnico de 6 Paneles (Dashboard `1000v`)</strong> — Clic para desplegar</summary>
-
-Cada escala exporta además un dashboard técnico de 6 paneles (y 18 paneles individuales en PNG) con:
-1. Panorama completo de la ventana + cono calibrado (`R² = 0.772`, `MAPE = 8.28%`).
-2. Zoom táctico reciente (`120` últimas velas + `t+150`).
-3. Velocidad del retorno (`dr/dt`) y cruces por cero.
-4. Aceleración del retorno (`d²r/dt²`) e inflexiones.
-5. Mapa de espacio de fases 2D Retorno-Volumen (`V_z` vs. retorno suavizado) y sentido de giro orbital.
-6. Auditoría histórica completa de **tensión CUSUM** (`S+ / S-` frente al umbral `H = 5.0`), preservada con rigor fuera de la vista ejecutiva limpia.
-
-![Dashboard Técnico de 6 Paneles para BTC-USD 1000v](docs/assets/btc_dashboard_1000v.png)
-
-</details>
+- **Sentido antihorario (`Lz > 0`, `IV → I → II → III`):** El capital paciente compra *antes* del titular.
+- **Sentido horario (`Lz < 0`):** Primero salta el precio, y la multitud corre detrás.
 
 <details>
-<summary>🧩 <strong>Explorar el Widget Vectorial Embebible (&lt; 35 KB SVG Puro)</strong> — Clic para desplegar</summary>
+<summary>🗺️ <strong>Guía Visual: Cómo Leer un Atractor de Fase 2D Vivo (Caso Real S&P 500)</strong> — Clic para desplegar</summary>
 
-Pensado para portales fintech, newsletters y terminales propios (listo para `<iframe>` en `< 35 KB`, cero dependencia de `plotly.min.js`, modo Oscuro/Claro, acompañado por `indicator_feed.json`, TradingView `indicator.pine` y `alerts.json`):
-
-![Vista previa del Widget SVG KineTopus para BTC-USD](docs/assets/btc_widget_preview.svg)
+![Cómo mira KineTopus un mercado y guía para leer su atractor de fase 2D](docs/assets/ilus_00_guia_kinetopus_y_atractor.png)
 
 </details>
 
 ---
 
-## ✨ Qué Incluye (`v0.4.0`)
+## 📊 Qué Revelaron 26,294 Instantáneas Reales (`2000–2026`, `15` Mercados Vírgenes)
 
-| Capa | Qué Entrega | Artefactos / Comandos Clave |
+Lejos de jugar a adivinar titulares, el microscopio 2D reveló cuatro huellas empíricas reproducibles sobre **27 series** (incluidos **15 mercados vírgenes** jamás tocados al calibrar):
+
+| Descubrimiento | Evidencia Empírica (`26,294` Cortes Causales) | Utilidad Práctica Directa |
 | :--- | :--- | :--- |
-| **1. Motor Geométrico Multi-Lente** | Análisis paralelo `2000v / 1000v / 500v` sobre descarga única inteligente (`10y` con respaldo automático a `max`), rescate *Autopilot 2D*, guardarraíl anti-explosión exponencial en EDOs, test residual `Ljung-Box` y auditoría Walk-Forward OOS opcional (`--audit-oos`). | `kinetopus-analyze --ticker "BTC-USD"` |
-| **2. Reportes Offline en Dos Etapas** | Historial completo al 100% persistido en `report_bundle.npz`; `report.html` autocontenido (`plotly.min.js`, selectores `[120v \| 500v \| 1000v \| 2000v \| Todo]`, cono, 3 dashboards, Oscuro/Claro) + fusión determinista `--render-report` con `narrative.json`. | `report.html`, `analysis.md`, `confluence.json` |
-| **3. Suite Portable B2B y Alertas Activas** | Contrato JSON ligero (`kinetopus.indicator.v1`, `~5–12 KB`), `widget.html` SVG puro `< 35 KB`, overlay **TradingView Pine Script v5** (`indicator.pine`) y 6 reglas deterministas de alertas con deduplicación SHA-256 y despacho webhook. | `indicator_feed.json`, `widget.html`, `indicator.pine`, `alerts.json` |
-| **4. Micro-Servicio FastAPI y Servidor MCP** | Portal Web ligero + API REST (`kinetopus-serve`) protegida bajo `threading.Lock` para equipos de `≤ 16 GB` RAM, más servidor MCP `stdio` (`kinetopus-mcp`) para agentes de IA. | `kinetopus-serve`, `kinetopus-mcp` |
+| **1. Giro Oculto (`Lz`)**<br>*99.9% independiente de `OBV` y `CMF(20)`* | **Bloque institucional (`>55%`):** `S&P 500 (79%)`, `Nasdaq-100 (78%)`, `CAT (70%)`, `Emergentes (68%)`, `MSFT (63%)`<br>**Bloque reactivo/cripto (`<40%`):** `BTC (33%)`, `ETH (32%)`, `SOL (28%)`, además de `Oro (36%)` y `Tesla (39%)` | Demuestra que el giro capta **psicología colectiva, no horarios de bolsa**: ahorro paciente frente a persecución del movimiento — invisible para `OBV` (`ρ = +0.011`) y `CMF` (`ρ = +0.020`). |
+| **2. Mutación en Vivo**<br>*MicroStrategy (`2018–2026`)* | **`53%`** (18 años como firma tranquila de software) → **`27%`** (al convertir su tesorería en Bitcoin en ago 2020) → **`42%`** (tras los ETFs spot de 2024; `IBIT` marca `47%` diario / `51%` semanal) | Sin cambiar de nombre en bolsa, mutó de especie financiera en el espacio de fases mientras `CMF` seguía ciego cerca del `50%`. |
+| **3. Elipses vs. Hipérbolas (`Fitzgibbon`) y Fractal `6x`** | Las elipses cerradas son **`3` veces más estables** (`Re(λ)` mediana `+0.0032` vs `+0.0096 d⁻¹`) en el **`100%` (`25/25`)** de los mercados diarios. Bajando el zoom `6x` a **`BTC 4H`** (`3,543` barras, cero reajustes), el foco espiral queda clavado en **`47%` vs. `47%`**. | Distingue órbitas contenidas que regresan al centro (`S&P 500`) de escapes abiertos (`Nvidia` fines de 2021): geometría real del mercado, no artefacto del reloj diario. |
+| **4. Sismógrafo 2D (`Re(λ)`) vs. `Scheffer AR(1)`** | Ante **`166` desplomes severos** en `15` mercados vírgenes: **`ROC-AUC = 0.603`** (`Re(λ)`) frente a `0.584` (`Anchura Bollinger`) y **`0.473` (`Scheffer AR(1)`)** (peor que lanzar una moneda). | Detecta fragilidad interna antes del giro — como en **Microsoft ene 2022 (`330 → 234 USD`)**, donde `AR(1)` dormía plano mientras la órbita 2D se abría en rojo. |
+
+### El Sismógrafo 2D en Vivo (`Microsoft`, Oct 2021 – Ene 2022)
+
+![Evolución real día a día de Microsoft abriéndose en tensión roja antes del techo de 2022](docs/assets/anim_03_el_trompo_antes_de_caer.gif)
+
+<details>
+<summary>🖼️ <strong>Gráficas de Respaldo: Mapa de Giros, Fractal 6x Fitzgibbon y Ranking Ciego ROC-AUC</strong> — Clic para desplegar</summary>
+
+1. **Quién Empuja a Quién (`26,294` cortes, ceguera `OBV`/`CMF` y caso `Oro`/`Tesla`):**
+   ![Mapa de quiralidad Lz en 25 mercados diarios e independencia de OBV/CMF](docs/assets/ilus_01_quien_empuja_a_quien.png)
+2. **Elipses Cerradas vs. Hipérbolas e Invariancia Fractal `6x` (`BTC 1D` vs `4H`):**
+   ![Formas geométricas con Fitzgibbon e invariancia fractal 6x en Bitcoin](docs/assets/ilus_02_formas_de_la_naturaleza_en_finanzas.png)
+3. **Ranking Ciego `ROC-AUC` y Límite Honesto (`S&P 500` el 12 de feb de 2020 Pre-COVID):**
+   ![Microsoft pre-2022 vs S&P 500 pre-COVID y ranking ROC-AUC en 15 mercados vírgenes](docs/assets/ilus_03_por_que_fallan_las_alarmas_planas.png)
+
+</details>
+
+### ⚖️ Un Instrumento de Navegación — Con Límites Honestos Explícitos
+Un instrumento serio demuestra su rigor enseñando también **lo que no puede ver**:
+- **Los choques exógenos siguen siendo exógenos:** El `12 de febrero de 2020`, días antes del desplome por COVID, el `S&P 500` dibujaba una elipse tranquila porque dentro del libro de órdenes aún no había fractura interna. **Un microscopio mide fragilidad interna del capital; jamás adivina un virus.**
+- **Crisis largas (`2008`):** Filtros lentos (`SMA-200`, `VolTarget`) siguen protegiendo mejor como regla total en mercados bajistas prolongados; la tensión 2D brilla como **sismógrafo local y modulador de riesgo**.
+- **Horizontes cortos en splines:** Los bordes `not-a-knot` de un spline cúbico solo sostienen curvatura unos pocos días libres, nunca a meses vista.
+- **Payoff práctico real:** Te da serenidad para sostener posiciones cuando la elipse gira antihoraria en manos pacientes; y **disciplina para reducir exposición o apalancamiento a la mitad** cuando el giro vira a horario y `Re(λ)` se abre en rojo (reduciendo el drawdown máximo en `8/8` criptoactivos netos de comisiones).
 
 ---
 
-## 🏗️ Arquitectura Open-Core
+## 🛠️ Del Descubrimiento al Software: Qué Corre Hoy (`v0.4.0`) y Qué Sigue (`v0.5.0`)
 
-**KineTopus-Analyst** mantiene una frontera limpia de desacoplamiento: `kinetopus_pro/engine_bridge.py` es el **único** módulo que importa `kinetopus-engine` (`Apache-2.0`), dejando el núcleo científico original 100% intacto.
+**KineTopus-Analyst (`kinetopus_pro`)** es la capa de producto *Local-First* Open-Core construida sobre [`KineTopus-Engine`](https://github.com/JuanDie778/KineTopus-Engine):
+
+- **Disponible hoy en [`v0.4.0`](https://github.com/JuanDie778/KineTopus-Analyst/releases/tag/v0.4.0):** CLI reproducible (`kinetopus-analyze`), `report.html` interactivo offline en 2 etapas (que incluye el **Mapa 2D Retorno-Volumen y sentido de giro orbital en el Panel 5** junto con curvas multi-escala y forense CUSUM), contrato JSON compacto (`indicator_feed.json`), widget SVG `< 35 KB` embebible (`widget.html`), TradingView Pine Script v5 (`indicator.pine`), 6 alertas deduplicadas por SHA-256 con webhook, Portal Web FastAPI (`kinetopus-serve`) y servidor MCP (`kinetopus-mcp`) optimizado para `≤ 16 GB` RAM (`np.float64` `C_CONTIGUOUS`).
+- **Próximo Hito (`v0.5.0`, [Roadmap](docs/ROADMAP_PRO.md)):** Promover el **Microscopio 2D del Gran Estudio v3** (`Lz` % antihorario, cónicas `Fitzgibbon`, sismógrafo `Re(λ)` y modulador de riesgo al `50%`) + **Escáner Multi-Activo** al centro del CLI, widget y API.
 
 ```mermaid
 flowchart LR
     CORE["KineTopus-Engine (Apache-2.0)<br/>FFT · Splines C² · CUSUM · SINDy"] --> BRIDGE["kinetopus_pro/engine_bridge.py<br/>Adaptador Open-Core"]
-    BRIDGE --> PIPE["Motor Geométrico Multi-Lente<br/>2000v · 1000v · 500v + Cono EWMA"]
-    PIPE --> RPT["Reportes Offline en 2 Etapas<br/>report.html · analysis.md · hero.png"]
+    BRIDGE --> PIPE["Pipeline Causal Headless<br/>Espacio de Fases 2D · Quiebres · Conos"]
+    PIPE --> RPT["Reportes Offline en 2 Etapas<br/>report.html · analysis.md · Panel 5 Mapa 2D"]
     PIPE --> B2B["Suite Portable B2B y Alertas<br/>indicator_feed.json · widget.html · Pine v5 · Webhooks"]
     B2B --> SVC["Servicio FastAPI y Portal Web<br/>kinetopus-serve"]
     B2B --> MCP["Servidor MCP para Agentes IA<br/>kinetopus-mcp"]
 ```
 
+<details>
+<summary>⚙️ <strong>Vista Técnica de los Artefactos Actuales `v0.4.0` (Dashboard de 6 Paneles y Widget SVG &lt; 35 KB)</strong> — Clic para desplegar</summary>
+
+El **Panel 5 (`Mapa Retorno-Volumen`)** del laboratorio de 6 paneles ya renderiza el atractor 2D y su giro junto con la tensión CUSUM (`Panel 6`) y el widget SVG embebible:
+
+![Dashboard Técnico de 6 Paneles KineTopus v0.4.0](docs/assets/btc_dashboard_1000v.png)
+![Vista previa del Widget SVG KineTopus v0.4.0](docs/assets/btc_widget_preview.svg)
+
+</details>
+
 ---
 
-## ⚡ Inicio Rápido (100% Reproducible)
+## ⚡ Inicio Rápido (100% Reproducible, Local-First)
 
-**Requisitos:** Python `3.10+` y hasta `16 GB` de RAM (diseño *Local-First* vectorizado en `np.float64` `C_CONTIGUOUS`).
+**Requisitos:** Python `3.10+` y hasta `16 GB` de RAM.
 
-### 1. Instalación
 ```bash
-# Instalar el núcleo científico open-source desde GitHub
+# 1. Instalar el núcleo científico open-source desde GitHub
 pip install "git+https://github.com/JuanDie778/KineTopus-Engine.git"
 
-# Clonar e instalar KineTopus-Analyst (con extras de servicio FastAPI/MCP y pytest)
+# 2. Clonar e instalar KineTopus-Analyst (CLI, Portal FastAPI, Servidor MCP y pytest)
 git clone https://github.com/JuanDie778/KineTopus-Analyst.git
 cd KineTopus-Analyst
 pip install -e ".[service,dev]"
 ```
 
-<details>
-<summary>💡 <strong>¿Trabajas con un clon hermano local de KineTopus-Engine?</strong></summary>
-
-`engine_bridge.py` detecta automáticamente una carpeta hermana `../KineTopus-Engine` o la variable de entorno `KINETOPUS_ENGINE_DIR` si el núcleo científico no está instalado de forma global vía `pip`.
-
-</details>
-
-### 2. Ejecutar tu Primer Análisis Multi-Lente
 ```bash
-# Corrida estándar Geométrica Pura (genera report.html, hero.png, widget.html, Pine v5 y alertas)
-kinetopus-analyze --ticker "BTC-USD" --interval 1d
+# Ejecutar análisis completo offline (genera report.html, Panel 5 Espacio de Fases 2D, widget.html, Pine v5 y alertas)
+kinetopus-analyze --ticker "SPY" --interval 1d
 
-# Opcional: activar auditoría retrospectiva Walk-Forward OOS junto a la geometría viva
-kinetopus-analyze --ticker "SPY" --interval 1d --audit-oos
+# Opcional: incluir auditoría causal Walk-Forward OOS
+kinetopus-analyze --ticker "BTC-USD" --interval 1d --audit-oos
 
-# Actualizar artefactos portables B2B y despachar alertas nuevas vía webhook (< 0.2 s)
-kinetopus-analyze --export-portable "reports/BTC-USD/<TIMESTAMP>" --webhook-url "https://hooks.example.com/..."
-```
-
-### 3. Levantar Portal HTTP / API o Servidor MCP
-```bash
-# Portal Web Ligero + API REST B2B en http://127.0.0.1:8000
+# Levantar Portal Web + API REST B2B (http://127.0.0.1:8000) o Servidor MCP stdio
 kinetopus-serve --host 127.0.0.1 --port 8000
-
-# Servidor MCP stdio para asistentes IA (list_analyzed_assets, get_asset_indicator, get_asset_alerts, get_tradingview_pine)
 kinetopus-mcp
-```
 
-### 4. Ejecutar la Suite de Tests Offline
-```bash
+# Ejecutar los 22 tests de auditoría automatizados
 pytest tests/ -v -W ignore::UserWarning
 ```
 
 ---
 
-## 📚 Documentación y Hoja de Ruta (`v0.5.0` Siguiente Frente)
+## 📚 Documentación Bilingüe
 
-| Tema | Español | English |
+| Documento | Español | English |
 | :--- | :--- | :--- |
-| **Manifiesto y Norte de Producto** | [docs/MANIFIESTO.md](docs/MANIFIESTO.md) | [docs/en/MANIFESTO.md](docs/en/MANIFESTO.md) |
+| **Manifiesto de Producto (Norte: Atractor 2D)** | [docs/MANIFIESTO.md](docs/MANIFIESTO.md) | [docs/en/MANIFESTO.md](docs/en/MANIFESTO.md) |
 | **Arquitectura Open-Core (`v0.4.0`)** | [docs/ARCHITECTURE_PRO.md](docs/ARCHITECTURE_PRO.md) | [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md) |
-| **Roadmap (`v0.5.0` Escáner Multi-Activo)** | [docs/ROADMAP_PRO.md](docs/ROADMAP_PRO.md) | [docs/en/ROADMAP.md](docs/en/ROADMAP.md) |
+| **Roadmap (`v0.5.0` Microscopio 2D + Escáner)** | [docs/ROADMAP_PRO.md](docs/ROADMAP_PRO.md) | [docs/en/ROADMAP.md](docs/en/ROADMAP.md) |
 | **Historial de Cambios y Seguridad** | [CHANGELOG.md](CHANGELOG.md) | [SECURITY.md](SECURITY.md) |
-
-**Próximo Frente — Hito 3 (`v0.5.0` Escáner Multi-Activo y Multi-Serie):** Barrido transversal sobre lotes mixtos de tickers de Yahoo Finance y CSVs locales (incluidos pares dinámicos acoplados `(X, Y)` no financieros con ceros o negativos bajo `--classic-price`), exportando tablas maestras deterministas `JSON/CSV` conectadas al servicio HTTP.
 
 ---
 
@@ -192,4 +200,4 @@ pytest tests/ -v -W ignore::UserWarning
 
 </details>
 
-> ⚠️ **Aviso Legal:** *KineTopus-Analyst es una herramienta de física computacional e investigación cuantitativa. Ninguno de sus resultados, gráficos, indicadores, alertas o proyecciones constituye asesoría financiera ni recomendación de inversión.*
+> ⚠️ **Aviso Legal:** *Software de investigación cuantitativa y física computacional basado en datos históricos reales (`2000–2026`). Nada en este repositorio constituye asesoría financiera ni recomendación de inversión.*
